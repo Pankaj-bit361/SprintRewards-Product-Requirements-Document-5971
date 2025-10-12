@@ -45,7 +45,16 @@ export const getAllSprints = async () => {
 export const getSprintTasks = async (sprintId) => {
   try {
     const response = await questHiveAPI.get(`/sprints/${sprintId}/tasks`);
-    return response.data;
+
+    if (!response.data || !response.data.success || !response.data.data) {
+      return {
+        success: false,
+        data: [],
+        totalTasks: 0,
+      };
+    }
+
+    return response.data.data;
   } catch (error) {
     console.error(
       `Error fetching tasks for sprint ${sprintId}:`,
