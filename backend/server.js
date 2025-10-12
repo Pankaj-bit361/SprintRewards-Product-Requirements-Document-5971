@@ -3,13 +3,12 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
-
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import sprintRoutes from './routes/sprints.js';
 import transactionRoutes from './routes/transactions.js';
 import taskRoutes from './routes/tasks.js';
-import { runWeeklyAICheck, resetSprint } from './services/aiService.js';
+import {runWeeklyAICheck,resetSprint} from './services/aiService.js';
 
 dotenv.config();
 
@@ -27,19 +26,40 @@ app.use('/api/sprints', sprintRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/tasks', taskRoutes);
 
+// Welcome route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to Sprint Rewards! 🏃‍♂️',
+    status: 'active',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      sprints: '/api/sprints',
+      transactions: '/api/transactions',
+      tasks: '/api/tasks',
+      health: '/api/health'
+    },
+    documentation: 'https://github.com/your-repo/sprint-rewards'
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'SprintRewards API is running' });
+  res.json({
+    status: 'OK',
+    message: 'SprintRewards API is running'
+  });
 });
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB');
-    
     // Start server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Welcome to Sprint Rewards API! Visit http://localhost:${PORT}`);
     });
   })
   .catch((error) => {
