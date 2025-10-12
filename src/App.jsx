@@ -3,7 +3,7 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import Navbar from '@/components/Navbar';
+import DashboardLayout from '@/components/DashboardLayout';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Leaderboard from '@/pages/Leaderboard';
@@ -21,9 +21,9 @@ function App() {
             position="top-right"
             toastOptions={{
               style: {
-                background: 'rgba(255,255,255,0.1)',
+                background: 'rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#fff',
               },
             }}
@@ -34,12 +34,9 @@ function App() {
               path="/"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen">
-                    <Navbar />
-                    <main className="pt-16">
-                      <Dashboard />
-                    </main>
-                  </div>
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -47,12 +44,9 @@ function App() {
               path="/leaderboard"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen">
-                    <Navbar />
-                    <main className="pt-16">
-                      <Leaderboard />
-                    </main>
-                  </div>
+                  <DashboardLayout>
+                    <Leaderboard />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -60,12 +54,9 @@ function App() {
               path="/transactions"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen">
-                    <Navbar />
-                    <main className="pt-16">
-                      <Transactions />
-                    </main>
-                  </div>
+                  <DashboardLayout>
+                    <Transactions />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -73,12 +64,9 @@ function App() {
               path="/tasks"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen">
-                    <Navbar />
-                    <main className="pt-16">
-                      <Tasks />
-                    </main>
-                  </div>
+                  <DashboardLayout>
+                    <Tasks />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
@@ -86,12 +74,9 @@ function App() {
               path="/admin"
               element={
                 <ProtectedRoute requireFounder>
-                  <div className="min-h-screen">
-                    <Navbar />
-                    <main className="pt-16">
-                      <AdminPanel />
-                    </main>
-                  </div>
+                  <DashboardLayout>
+                    <AdminPanel />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />

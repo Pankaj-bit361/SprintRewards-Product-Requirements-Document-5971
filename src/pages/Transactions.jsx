@@ -25,16 +25,21 @@ const Transactions = () => {
     try {
       const [transactionsRes, usersRes] = await Promise.all([
         api.get('/transactions/history'),
-        isFounder ? api.get('/users') : Promise.resolve({ data: [] }) // Only fetch all users if founder
+        // Fetch all users if founder, otherwise fetch a safe list of users
+        isFounder ? api.get('/users') : api.get('/users/leaderboard')
       ]);
       setTransactions(transactionsRes.data.transactions);
+      
+      let userList = [];
       if (isFounder) {
-        setEmployees(usersRes.data.filter(u => u.role === 'employee'));
+        userList = usersRes.data.filter(u => u.role === 'employee');
       } else {
-        // Fetch employees for sending points if not founder
-        const allUsers = await api.get('/users/leaderboard'); // a way to get users without being admin
-        setEmployees(allUsers.data.topGivers.concat(allUsers.data.topReceivers).filter((u, i, self) => i === self.findIndex(t => t._id === u._id) && u._id !== user._id));
+        // For employees, combine top givers and receivers and filter out duplicates and self
+        const allUsers = usersRes.data.topGivers.concat(usersRes.data.topReceivers);
+        userList = allUsers.filter((u, i, self) => i === self.findIndex(t => t._id === u._id) && u._id !== user._id);
       }
+      setEmployees(userList);
+
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Could not load transaction data.');

@@ -57,6 +57,12 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: ''
+  },
+  // Quest Hive integration
+  questHiveUserId: {
+    type: String,
+    default: null,
+    sparse: true // Allows multiple null values
   }
 }, {
   timestamps: true
@@ -65,7 +71,7 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

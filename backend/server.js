@@ -8,7 +8,8 @@ import userRoutes from './routes/users.js';
 import sprintRoutes from './routes/sprints.js';
 import transactionRoutes from './routes/transactions.js';
 import taskRoutes from './routes/tasks.js';
-import {runWeeklyAICheck,resetSprint} from './services/aiService.js';
+import questHiveRoutes from './routes/questHive.js';
+import { runWeeklyAICheck, resetSprint } from './services/aiService.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/sprints', sprintRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/quest-hive', questHiveRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -38,6 +40,7 @@ app.get('/', (req, res) => {
       sprints: '/api/sprints',
       transactions: '/api/transactions',
       tasks: '/api/tasks',
+      questHive: '/api/quest-hive',
       health: '/api/health'
     },
     documentation: 'https://github.com/your-repo/sprint-rewards'

@@ -62,6 +62,7 @@ router.post('/send', auth, async (req, res) => {
         points: transaction.points,
         message: transaction.message,
         recipient: recipient.name,
+        status: transaction.status,
       },
     });
   } catch (error) {
