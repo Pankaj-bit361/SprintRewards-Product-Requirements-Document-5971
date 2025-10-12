@@ -10,6 +10,14 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // If trying to register a founder, check if one already exists
+    if (role === 'founder') {
+      const founderExists = await User.findOne({ role: 'founder' });
+      if (founderExists) {
+        return res.status(403).json({ message: 'A founder account already exists. Cannot create another.' });
+      }
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -17,7 +25,12 @@ router.post('/register', async (req, res) => {
     }
 
     // Create user
-    const user = new User({ name, email, password, role: role || 'employee' });
+    const user = new User({
+      name,
+      email,
+      password,
+      role: role || 'employee',
+    });
     await user.save();
 
     // Generate token
@@ -34,8 +47,8 @@ router.post('/register', async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -77,8 +90,8 @@ router.post('/login', async (req, res) => {
         sprintPoints: user.sprintPoints,
         rewardPoints: user.rewardPoints,
         isEligible: user.isEligible,
-        unlockedThisSprint: user.unlockedThisSprint
-      }
+        unlockedThisSprint: user.unlockedThisSprint,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
