@@ -1,42 +1,43 @@
-import axios from 'axios';
-import dotenv from 'dotenv';
+import axios from "axios";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const QUEST_HIVE_BASE_URL = 'https://addons.questera.ai/api/quest-hive';
+const QUEST_HIVE_BASE_URL = "https://addons.questera.ai/api/quest-hive";
 
 // Quest Hive API configuration
 const questHiveConfig = {
-  apiKey: process.env.QUEST_HIVE_API_KEY || 'k-8860e8e6-1f30-4573-bbc6-730f12fd9b28',
-  entityId: process.env.QUEST_HIVE_ENTITY_ID || 'e-30923f47-5920-4415-ad99-ebcd7a4a6e6f',
-  token: process.env.QUEST_HIVE_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1LWMwMzViYmVjLTk1ZWEtNDM2MS1iZGFhLWZlNTM0OWM1Y2NkZSIsImlhdCI6MTc1Nzk5NjgyMywiZXhwIjoxNzYwNTg4ODIzfQ.vyu2pVKgmZYP3EMGs2rYxG6t7u1WzM1QBuNeKI-GS5E',
-  userId: process.env.QUEST_HIVE_USER_ID || 'u-c035bbec-95ea-4361-bdaa-fe5349c5ccde'
+  apiKey:
+    process.env.QUEST_HIVE_API_KEY || "k-8860e8e6-1f30-4573-bbc6-730f12fd9b28",
+  entityId:
+    process.env.QUEST_HIVE_ENTITY_ID ||
+    "e-30923f47-5920-4415-ad99-ebcd7a4a6e6f",
+  token:
+    process.env.QUEST_HIVE_TOKEN ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1LWMwMzViYmVjLTk1ZWEtNDM2MS1iZGFhLWZlNTM0OWM1Y2NkZSIsImlhdCI6MTc1Nzk5NjgyMywiZXhwIjoxNzYwNTg4ODIzfQ.vyu2pVKgmZYP3EMGs2rYxG6t7u1WzM1QBuNeKI-GS5E",
+  userId:
+    process.env.QUEST_HIVE_USER_ID || "u-c035bbec-95ea-4361-bdaa-fe5349c5ccde",
 };
 
 // Create axios instance with default headers
 const questHiveAPI = axios.create({
   baseURL: QUEST_HIVE_BASE_URL,
   headers: {
-    'accept': 'application/json, text/plain, */*',
-    'accept-language': 'en-US,en;q=0.9',
-    'apikey': questHiveConfig.apiKey,
-    'entityid': questHiveConfig.entityId,
-    'origin': 'https://hive.plgos.com',
-    'referer': 'https://hive.plgos.com/',
-    'token': questHiveConfig.token,
-    'userid': questHiveConfig.userId,
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
-  }
+    // apikey: questHiveConfig.apiKey,
+    entityid: questHiveConfig.entityId,
+  },
 });
 
 // Get all sprints for the entity
 export const getAllSprints = async () => {
   try {
-    const response = await questHiveAPI.get(`/users/${questHiveConfig.userId}/initial-data?entityId=${questHiveConfig.entityId}`);
+    const response = await questHiveAPI.get(
+      `/users/${questHiveConfig.userId}/initial-data?entityId=${questHiveConfig.entityId}`
+    );
     return response.data;
   } catch (error) {
-    console.error('Error fetching sprints from Quest Hive:', error.message);
-    throw new Error('Failed to fetch sprints from Quest Hive');
+    console.error("Error fetching sprints from Quest Hive:", error.message);
+    throw new Error("Failed to fetch sprints from Quest Hive");
   }
 };
 
@@ -46,7 +47,10 @@ export const getSprintTasks = async (sprintId) => {
     const response = await questHiveAPI.get(`/sprints/${sprintId}/tasks`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching tasks for sprint ${sprintId}:`, error.message);
+    console.error(
+      `Error fetching tasks for sprint ${sprintId}:`,
+      error.message
+    );
     throw new Error(`Failed to fetch tasks for sprint ${sprintId}`);
   }
 };
@@ -68,89 +72,74 @@ export const getUserTaskHistory = async (questHiveUserId = null) => {
     // First get all sprints
     const sprintsData = await getAllSprints();
     const sprints = sprintsData.data?.sprints || [];
-    
+
     let allTasks = [];
-    
+
     // Get tasks from each sprint
     for (const sprint of sprints) {
       try {
         const sprintTasks = await getSprintTasks(sprint.sprintId);
         if (sprintTasks.data && sprintTasks.data.length > 0) {
           // Filter tasks by user if questHiveUserId is provided
-          const userTasks = questHiveUserId ? 
-            sprintTasks.data.filter(task => task.userId === questHiveUserId) : 
-            sprintTasks.data;
-          
+          const userTasks = questHiveUserId
+            ? sprintTasks.data.filter((task) => task.userId === questHiveUserId)
+            : sprintTasks.data;
+
           // Add sprint info to each task
-          const tasksWithSprint = userTasks.map(task => ({
+          const tasksWithSprint = userTasks.map((task) => ({
             ...task,
             sprintInfo: {
               sprintId: sprint.sprintId,
               startDate: sprint.startDate,
-              endDate: sprint.endDate
-            }
+              endDate: sprint.endDate,
+            },
           }));
-          
+
           allTasks = [...allTasks, ...tasksWithSprint];
         }
       } catch (sprintError) {
-        console.warn(`Failed to fetch tasks for sprint ${sprint.sprintId}:`, sprintError.message);
+        console.warn(
+          `Failed to fetch tasks for sprint ${sprint.sprintId}:`,
+          sprintError.message
+        );
         continue;
       }
     }
-    
+
     return {
       success: true,
       data: allTasks,
-      totalTasks: allTasks.length
+      totalTasks: allTasks.length,
     };
   } catch (error) {
-    console.error('Error fetching user task history:', error.message);
-    throw new Error('Failed to fetch user task history');
+    console.error("Error fetching user task history:", error.message);
+    throw new Error("Failed to fetch user task history");
   }
 };
 
 // Get all Quest Hive users from the entity
 export const getQuestHiveUsers = async () => {
   try {
-    // This endpoint should return all users in the entity
-    const response = await questHiveAPI.get(`/entities/${questHiveConfig.entityId}/users`);
-    
-    if (response.data && response.data.success) {
+    const response = await questHiveAPI.get(`/users`);
+
+    console.log("Users response:", response.data.data.length);
+
+    if (!response.data || !response.data.success) {
       return {
-        success: true,
-        data: response.data.data || []
+        success: false,
+        data: [],
+        totalUsers: 0,
       };
     }
-    
-    // Fallback: try to get users from task history
-    const taskHistory = await getUserTaskHistory();
-    const uniqueUserIds = new Set();
-    
-    taskHistory.data.forEach(task => {
-      if (task.userId) {
-        uniqueUserIds.add(task.userId);
-      }
-    });
-    
-    // Create mock user data from unique user IDs
-    const users = Array.from(uniqueUserIds).map(userId => ({
-      userId: userId,
-      name: `User ${userId.substring(0, 8)}`,
-      email: `${userId}@questlabs.biz`,
-      role: 'MEMBER',
-      companyRole: 'EMPLOYEE',
-      entityId: questHiveConfig.entityId,
-      team: ['Development']
-    }));
-    
+
     return {
       success: true,
-      data: users
+      data: response.data.data || [],
+      totalUsers: response.data.data.length,
     };
   } catch (error) {
-    console.error('Error fetching Quest Hive users:', error.message);
-    throw new Error('Failed to fetch Quest Hive users');
+    console.error("Error fetching Quest Hive users:", error.message);
+    throw new Error("Failed to fetch Quest Hive users");
   }
 };
 
@@ -159,20 +148,20 @@ export const getUsersFromTasks = async () => {
   try {
     const taskHistory = await getUserTaskHistory();
     const users = new Set();
-    
-    taskHistory.data.forEach(task => {
+
+    taskHistory.data.forEach((task) => {
       if (task.userId) {
         users.add(task.userId);
       }
     });
-    
-    return Array.from(users).map(userId => ({
+
+    return Array.from(users).map((userId) => ({
       questHiveUserId: userId,
       email: `${userId}@questlabs.biz`, // Generate email from userId
-      name: `User ${userId.substring(0, 8)}` // Generate name from userId
+      name: `User ${userId.substring(0, 8)}`, // Generate name from userId
     }));
   } catch (error) {
-    console.error('Error fetching Quest Hive users from tasks:', error.message);
+    console.error("Error fetching Quest Hive users from tasks:", error.message);
     throw error;
   }
 };

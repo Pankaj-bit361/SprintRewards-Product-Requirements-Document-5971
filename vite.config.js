@@ -15,12 +15,6 @@ export default defineConfig({
     sourcemap: true,
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
+    port: 3000,
   },
 });

@@ -49,10 +49,7 @@ router.get('/quest-hive-users', auth, isFounder, async (req, res) => {
     
     // Filter out users that are already mapped and exclude owners
     const availableUsers = questHiveUsers.data.filter(qhUser => 
-      !mappedUserIds.has(qhUser.userId) && 
-      qhUser.role !== 'OWNER' && 
-      qhUser.companyRole !== 'OWNER'
-    );
+      !mappedUserIds.has(qhUser.userId) );
     
     res.json({
       success: true,
@@ -158,7 +155,8 @@ router.post('/from-quest-hive', auth, isFounder, async (req, res) => {
   }
 });
 
-// Add employee (founder only) - Legacy method for non-Quest Hive users
+
+
 router.post('/', auth, isFounder, async (req, res) => {
   try {
     const { name, email, password, questHiveUserId } = req.body;
