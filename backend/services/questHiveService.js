@@ -45,16 +45,7 @@ export const getAllSprints = async () => {
 export const getSprintTasks = async (sprintId) => {
   try {
     const response = await questHiveAPI.get(`/sprints/${sprintId}/tasks`);
-
-    if (!response.data || !response.data.success || !response.data.data) {
-      return {
-        success: false,
-        data: [],
-        totalTasks: 0,
-      };
-    }
-
-    return response.data.data;
+    return response.data;
   } catch (error) {
     console.error(
       `Error fetching tasks for sprint ${sprintId}:`,
@@ -82,7 +73,6 @@ export const getUserTaskHistory = async (questHiveUserId = null) => {
     const sprintsData = await getAllSprints();
     const sprints = sprintsData.data?.sprints || [];
 
-
     let allTasks = [];
 
     // Get tasks from each sprint
@@ -90,11 +80,12 @@ export const getUserTaskHistory = async (questHiveUserId = null) => {
       try {
         const sprintTasks = await getSprintTasks(sprint.sprintId);
         if (sprintTasks.data && sprintTasks.data.length > 0) {
+          // Filter tasks by user if questHiveUserId is provided
           const userTasks = questHiveUserId
             ? sprintTasks.data.filter((task) => task.userId === questHiveUserId)
             : sprintTasks.data;
 
-
+          // Add sprint info to each task
           const tasksWithSprint = userTasks.map((task) => ({
             ...task,
             sprintInfo: {

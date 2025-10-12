@@ -49,11 +49,25 @@ const AdminPanel = () => {
         api.get('/users'),
         api.get('/transactions/all?limit=100')
       ]);
-      setEmployees(employeesRes.data);
-      setTransactions(transactionsRes.data.transactions);
+      
+      setEmployees(employeesRes.data || []);
+      
+      // Handle different response structures
+      const transactionData = transactionsRes.data;
+      if (Array.isArray(transactionData)) {
+        setTransactions(transactionData);
+      } else if (transactionData && Array.isArray(transactionData.transactions)) {
+        setTransactions(transactionData.transactions);
+      } else {
+        console.warn('Unexpected transaction data structure:', transactionData);
+        setTransactions([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch admin data.');
+      // Set default values on error
+      setEmployees([]);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -63,12 +77,15 @@ const AdminPanel = () => {
     setQuestHiveLoading(true);
     try {
       const response = await api.get('/users/quest-hive-users');
-      if (response.data.success) {
-        setQuestHiveUsers(response.data.data);
+      if (response.data && response.data.success) {
+        setQuestHiveUsers(response.data.data || []);
+      } else {
+        setQuestHiveUsers([]);
       }
     } catch (error) {
       console.error('Error fetching Quest Hive users:', error);
       toast.error('Failed to fetch Quest Hive users.');
+      setQuestHiveUsers([]);
     } finally {
       setQuestHiveLoading(false);
     }
@@ -81,7 +98,7 @@ const AdminPanel = () => {
       toast.success('Employee created from Quest Hive user successfully!');
       closeQuestHiveModal();
       fetchData();
-      fetchQuestHiveUsers(); // Refresh available users
+      fetchQuestHiveUsers();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create employee from Quest Hive user');
     }
@@ -132,6 +149,18 @@ const AdminPanel = () => {
     });
   };
 
+  // Safe data processing with fallbacks
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+  
+  const pendingTransactions = safeTransactions.filter(t => t && t.status === 'pending');
+  const approvedTransactions = safeTransactions.filter(t => t && t.status === 'approved');
+  const totalEmployees = safeEmployees.filter(e => e && e.role === 'employee').length;
+  const eligibleEmployees = safeEmployees.filter(e => e && e.role === 'employee' && e.isEligible).length;
+  const totalPointsInCirculation = safeEmployees.reduce((sum, e) => sum + (e?.rewardPoints || 0), 0);
+  const questHiveMappedEmployees = safeEmployees.filter(e => e && e.questHiveUserId).length;
+  const totalPointsTransferred = approvedTransactions.reduce((sum, t) => sum + (t?.points || 0), 0);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -139,14 +168,6 @@ const AdminPanel = () => {
       </div>
     );
   }
-
-  const pendingTransactions = transactions.filter(t => t.status === 'pending');
-  const approvedTransactions = transactions.filter(t => t.status === 'approved');
-  const totalEmployees = employees.filter(e => e.role === 'employee').length;
-  const eligibleEmployees = employees.filter(e => e.role === 'employee' && e.isEligible).length;
-  const totalPointsInCirculation = employees.reduce((sum, e) => sum + e.rewardPoints, 0);
-  const questHiveMappedEmployees = employees.filter(e => e.questHiveUserId).length;
-  const totalPointsTransferred = approvedTransactions.reduce((sum, t) => sum + t.points, 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -301,9 +322,11 @@ const AdminPanel = () => {
                 className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
               >
                 <div>
-                  <p className="text-white">{tx.fromUserId.name} → {tx.toUserId.name}</p>
+                  <p className="text-white">
+                    {tx.fromUserId?.name || 'Unknown User'} → {tx.toUserId?.name || 'Unknown User'}
+                  </p>
                   <p className="text-sm text-gray-400">
-                    {tx.points} points - <span className="italic">"{tx.message || 'No message'}"</span>
+                    {tx.points || 0} points - <span className="italic">"{tx.message || 'No message'}"</span>
                   </p>
                 </div>
                 <div className="flex space-x-2">
@@ -338,9 +361,9 @@ const AdminPanel = () => {
             <h2 className="text-lg font-semibold text-white">Quest Hive Employees</h2>
           </div>
           <div className="p-6">
-            {employees.filter(e => e.role === 'employee').length > 0 ? (
+            {safeEmployees.filter(e => e && e.role === 'employee').length > 0 ? (
               <div className="space-y-4">
-                {employees.filter(e => e.role === 'employee').map((employee, index) => (
+                {safeEmployees.filter(e => e && e.role === 'employee').map((employee, index) => (
                   <motion.div
                     key={employee._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -358,7 +381,7 @@ const AdminPanel = () => {
                           />
                         ) : (
                           <span className="text-white font-medium text-sm">
-                            {employee.name.charAt(0).toUpperCase()}
+                            {employee.name?.charAt(0)?.toUpperCase() || 'U'}
                           </span>
                         )}
                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -367,16 +390,16 @@ const AdminPanel = () => {
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <p className="font-medium text-white">{employee.name}</p>
+                          <p className="font-medium text-white">{employee.name || 'Unknown'}</p>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
                             <SafeIcon icon={FiExternalLink} className="w-3 h-3 mr-1" />
                             Quest Hive
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">{employee.email}</p>
+                        <p className="text-sm text-gray-500">{employee.email || 'No email'}</p>
                         <div className="flex items-center space-x-4 mt-1">
-                          <span className="text-xs text-gray-500">Sprint: {employee.sprintPoints}/12</span>
-                          <span className="text-xs text-gray-500">Rewards: {employee.rewardPoints}</span>
+                          <span className="text-xs text-gray-500">Sprint: {employee.sprintPoints || 0}/12</span>
+                          <span className="text-xs text-gray-500">Rewards: {employee.rewardPoints || 0}</span>
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               employee.isEligible
@@ -393,7 +416,9 @@ const AdminPanel = () => {
                         </div>
                         {employee.questHiveData && (
                           <div className="text-xs text-gray-500 mt-1">
-                            Quest Hive ID: {employee.questHiveUserId} | Team: {employee.questHiveData.team?.join(', ') || 'N/A'} | Role: {employee.questHiveData.companyRole || 'N/A'}
+                            Quest Hive ID: {employee.questHiveUserId || 'N/A'} | 
+                            Team: {employee.questHiveData.team?.join(', ') || 'N/A'} | 
+                            Role: {employee.questHiveData.companyRole || 'N/A'}
                           </div>
                         )}
                       </div>
@@ -440,11 +465,11 @@ const AdminPanel = () => {
             <p className="text-sm text-gray-400 mt-1">Complete transaction history across all employees</p>
           </div>
           <div className="p-6">
-            {transactions.length > 0 ? (
+            {safeTransactions.length > 0 ? (
               <div className="space-y-4">
-                {transactions.slice(0, 20).map((transaction, index) => (
+                {safeTransactions.slice(0, 20).map((transaction, index) => (
                   <motion.div
-                    key={transaction._id}
+                    key={transaction._id || index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
@@ -468,16 +493,16 @@ const AdminPanel = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">
-                          {transaction.fromUserId.name} → {transaction.toUserId.name}
+                          {transaction.fromUserId?.name || 'Unknown'} → {transaction.toUserId?.name || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                          {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'
-                          })}
+                          }) : 'Unknown date'}
                         </p>
                         {transaction.message && (
                           <p className="text-xs text-gray-500 italic mt-1">"{transaction.message}"</p>
@@ -485,19 +510,19 @@ const AdminPanel = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-bold text-white">{transaction.points} pts</span>
+                      <span className="text-lg font-bold text-white">{transaction.points || 0} pts</span>
                       <div className={`text-xs font-medium mt-1 ${
                         transaction.status === 'pending' ? 'text-yellow-400' :
                         transaction.status === 'approved' ? 'text-green-400' : 'text-red-400'
                       }`}>
-                        {transaction.status.toUpperCase()}
+                        {(transaction.status || 'unknown').toUpperCase()}
                       </div>
                     </div>
                   </motion.div>
                 ))}
-                {transactions.length > 20 && (
+                {safeTransactions.length > 20 && (
                   <div className="text-center py-4">
-                    <p className="text-gray-500 text-sm">Showing 20 of {transactions.length} transactions</p>
+                    <p className="text-gray-500 text-sm">Showing 20 of {safeTransactions.length} transactions</p>
                   </div>
                 )}
               </div>
@@ -583,7 +608,7 @@ const AdminPanel = () => {
                 </div>
                 <div className="text-2xl font-bold text-white">{pendingTransactions.length}</div>
                 <div className="text-sm text-gray-400">
-                  {pendingTransactions.reduce((sum, t) => sum + t.points, 0)} points pending
+                  {pendingTransactions.reduce((sum, t) => sum + (t?.points || 0), 0)} points pending
                 </div>
               </div>
 
@@ -593,10 +618,10 @@ const AdminPanel = () => {
                   <span className="text-red-400 font-medium">Rejected</span>
                 </div>
                 <div className="text-2xl font-bold text-white">
-                  {transactions.filter(t => t.status === 'rejected').length}
+                  {safeTransactions.filter(t => t && t.status === 'rejected').length}
                 </div>
                 <div className="text-sm text-gray-400">
-                  {transactions.filter(t => t.status === 'rejected').reduce((sum, t) => sum + t.points, 0)} points rejected
+                  {safeTransactions.filter(t => t && t.status === 'rejected').reduce((sum, t) => sum + (t?.points || 0), 0)} points rejected
                 </div>
               </div>
             </div>
@@ -606,30 +631,30 @@ const AdminPanel = () => {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Employee Performance Overview</h3>
             <div className="space-y-4">
-              {employees.filter(e => e.role === 'employee').slice(0, 5).map((employee, index) => (
-                <div key={employee._id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+              {safeEmployees.filter(e => e && e.role === 'employee').slice(0, 5).map((employee, index) => (
+                <div key={employee._id || index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
                       {employee.avatar ? (
                         <img src={employee.avatar} alt={employee.name} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
-                        <span className="text-white font-medium text-sm">{employee.name.charAt(0).toUpperCase()}</span>
+                        <span className="text-white font-medium text-sm">{employee.name?.charAt(0)?.toUpperCase() || 'U'}</span>
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-white">{employee.name}</p>
-                      <p className="text-xs text-gray-400">Sprint Points: {employee.sprintPoints}/12</p>
+                      <p className="font-medium text-white">{employee.name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-400">Sprint Points: {employee.sprintPoints || 0}/12</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-white">{employee.rewardPoints} points</div>
+                    <div className="text-sm font-medium text-white">{employee.rewardPoints || 0} points</div>
                     <div className={`text-xs ${employee.isEligible ? 'text-green-400' : 'text-gray-400'}`}>
                       {employee.isEligible ? 'Eligible' : 'Not Eligible'}
                     </div>
                   </div>
                 </div>
               ))}
-              {employees.filter(e => e.role === 'employee').length === 0 && (
+              {safeEmployees.filter(e => e && e.role === 'employee').length === 0 && (
                 <div className="text-center py-8">
                   <SafeIcon icon={FiUsers} className="w-12 h-12 text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-500">No employee data available</p>
@@ -680,13 +705,13 @@ const AdminPanel = () => {
                 <div className="space-y-3">
                   {questHiveUsers.map((qhUser) => (
                     <div
-                      key={qhUser.userId}
+                      key={qhUser.userId || qhUser.id}
                       className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                        questHiveForm.questHiveUserId === qhUser.userId
+                        questHiveForm.questHiveUserId === (qhUser.userId || qhUser.id)
                           ? 'border-blue-500 bg-blue-500/10'
                           : 'border-gray-700 hover:border-gray-600'
                       }`}
-                      onClick={() => setQuestHiveForm({ ...questHiveForm, questHiveUserId: qhUser.userId })}
+                      onClick={() => setQuestHiveForm({ ...questHiveForm, questHiveUserId: qhUser.userId || qhUser.id })}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
@@ -698,17 +723,17 @@ const AdminPanel = () => {
                             />
                           ) : (
                             <span className="text-white font-medium text-sm">
-                              {qhUser.name.charAt(0).toUpperCase()}
+                              {qhUser.name?.charAt(0)?.toUpperCase() || 'U'}
                             </span>
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-white">{qhUser.name}</p>
-                          <p className="text-sm text-gray-400">{qhUser.email}</p>
+                          <p className="font-medium text-white">{qhUser.name || 'Unknown'}</p>
+                          <p className="text-sm text-gray-400">{qhUser.email || 'No email'}</p>
                           <div className="flex items-center space-x-2 mt-1">
-                            <span className="text-xs text-gray-500">ID: {qhUser.userId}</span>
-                            <span className="text-xs text-gray-500">Role: {qhUser.companyRole || qhUser.role}</span>
-                            {qhUser.team && (
+                            <span className="text-xs text-gray-500">ID: {qhUser.userId || qhUser.id || 'N/A'}</span>
+                            <span className="text-xs text-gray-500">Role: {qhUser.companyRole || qhUser.role || 'N/A'}</span>
+                            {qhUser.team && Array.isArray(qhUser.team) && (
                               <span className="text-xs text-gray-500">Team: {qhUser.team.join(', ')}</span>
                             )}
                           </div>
