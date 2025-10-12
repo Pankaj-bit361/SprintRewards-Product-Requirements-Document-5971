@@ -1,9 +1,25 @@
 {
     "version": 2,
     "builds": [
-       { "src": "./server.js", "use": "@vercel/node" }
+       { "src": "./server.js", "use": "@vercel/node" },
+       { "src": "./api/cron/weekly-ai-check.js", "use": "@vercel/node" },
+       { "src": "./api/cron/reset-sprint.js", "use": "@vercel/node" }
     ],
     "routes": [
-       { "src": "/(.*)", "dest": "/" }
+       { "src": "/api/cron/(.*)", "dest": "/api/cron/$1" },
+       { "src": "/(.*)", "dest": "/server.js" }
+    ],
+    "env": {
+       "NODE_ENV": "production"
+    },
+    "crons": [
+       {
+         "path": "/api/cron/weekly-ai-check",
+         "schedule": "0 0 * * 5"
+       },
+       {
+         "path": "/api/cron/reset-sprint", 
+         "schedule": "0 6 * * 1"
+       }
     ]
  }

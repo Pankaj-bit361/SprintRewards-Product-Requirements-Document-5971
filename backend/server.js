@@ -52,29 +52,28 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Welcome to Sprint Rewards API! Visit http://localhost:${PORT}`);
-    });
-  })
-  .catch((error) => {
+// Connect to MongoDB (for Vercel serverless)
+const connectDB = async () => {
+  try {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('Connected to MongoDB');
+    }
+  } catch (error) {
     console.error('MongoDB connection error:', error);
+  }
+};
+
+// Initialize DB connection
+connectDB();
+
+// Export the app for Vercel
+export default app;
+
+// Only start server in development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Welcome to Sprint Rewards API! Visit http://localhost:${PORT}`);
   });
-
-// Cron jobs
-// Run AI check every Friday at midnight
-cron.schedule('0 0 * * 5', () => {
-  console.log('Running weekly AI eligibility check...');
-  runWeeklyAICheck();
-});
-
-// Reset sprint every Monday at 6 AM
-cron.schedule('0 6 * * 1', () => {
-  console.log('Resetting sprint...');
-  resetSprint();
-});
+}
