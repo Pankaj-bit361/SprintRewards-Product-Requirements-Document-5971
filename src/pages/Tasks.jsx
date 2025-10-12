@@ -15,7 +15,10 @@ const {
   FiClock,
   FiCheckCircle,
   FiPlay,
-  FiAlertCircle
+  FiAlertCircle,
+  FiTarget,
+  FiCode,
+  FiFileText
 } = FiIcons;
 
 const Tasks = () => {
@@ -52,9 +55,11 @@ const Tasks = () => {
       ]);
 
       if (sprintsResponse.data.success) {
-        setSprints(sprintsResponse.data.data?.data?.sprints || []);
+        const allSprints = sprintsResponse.data.data?.data?.sprints || [];
+        // Sort sprints by start date (latest first)
+        const sortedSprints = allSprints.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+        setSprints(sortedSprints);
       }
-
 
       if (usersResponse.data.success) {
         setQuestHiveUsers(usersResponse.data.data || []);
@@ -73,14 +78,13 @@ const Tasks = () => {
       
       if (sprintsResponse.data.success) {
         const allSprints = sprintsResponse.data.data?.data?.sprints || [];
-        setSprints(allSprints);
+        // Sort sprints by start date (latest first)
+        const sortedSprints = allSprints.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+        setSprints(sortedSprints);
         
         // Get the latest sprint (most recent by date)
-        if (allSprints.length > 0) {
-          const latestSprint = allSprints.reduce((latest, sprint) => {
-            return new Date(sprint.startDate) > new Date(latest.startDate) ? sprint : latest;
-          });
-          
+        if (sortedSprints.length > 0) {
+          const latestSprint = sortedSprints[0]; // First item after sorting
           setCurrentSprint(latestSprint);
           
           // Now fetch tasks for the latest sprint
@@ -99,19 +103,25 @@ const Tasks = () => {
     try {
       const response = await api.get(`/quest-hive/sprints/${sprintId}/tasks`);
 
-      
       if (response.data.success) {
         let tasks = response.data.data || [];
         
+        // Enhanced task parsing and filtering
+        tasks = tasks.map(task => parseTaskContent(task));
+        
         if (!isFounder && user?.questHiveUserId) {
-          tasks = tasks.filter(task => task.assignee.includes(user.questHiveUserId));
+          tasks = tasks.filter(task => 
+            task.assignee?.includes(user.questHiveUserId) || 
+            task.userId === user.questHiveUserId
+          );
         }
 
-        
         if (filters.search) {
           tasks = tasks.filter(task =>
             task.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
-            task.description?.toLowerCase().includes(filters.search.toLowerCase())
+            task.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
+            task.parsedContent?.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+            task.parsedContent?.description?.toLowerCase().includes(filters.search.toLowerCase())
           );
         }
         
@@ -126,6 +136,116 @@ const Tasks = () => {
       console.error(`Error fetching tasks for sprint ${sprintId}:`, error);
       toast.error('Could not load sprint tasks.');
     }
+  };
+
+  // Enhanced task content parser
+  const parseTaskContent = (task) => {
+    let parsedTask = { ...task };
+    
+    try {
+      // If task content is a string, try to parse it
+      if (typeof task.content === 'string') {
+        // Try to parse as JSON first
+        try {
+          const jsonContent = JSON.parse(task.content);
+          parsedTask.parsedContent = jsonContent;
+        } catch (jsonError) {
+          // If not JSON, try to extract structured data from text
+          const textContent = task.content;
+          
+          // Extract title (first line or until first newline)
+          const lines = textContent.split('\n').filter(line => line.trim());
+          const title = lines[0]?.replace(/^#+\s*/, '').trim() || task.title || 'Untitled Task';
+          
+          // Extract description (remaining content)
+          const description = lines.slice(1).join('\n').trim() || task.description || '';
+          
+          // Extract any structured information
+          const tags = extractTags(textContent);
+          const priority = extractPriority(textContent);
+          const estimatedTime = extractEstimatedTime(textContent);
+          
+          parsedTask.parsedContent = {
+            title,
+            description,
+            tags,
+            priority,
+            estimatedTime,
+            originalContent: textContent
+          };
+        }
+      }
+      
+      // Ensure we have a display title and description
+      parsedTask.displayTitle = parsedTask.parsedContent?.title || 
+                                task.title || 
+                                task.name || 
+                                'Untitled Task';
+      
+      parsedTask.displayDescription = parsedTask.parsedContent?.description || 
+                                     task.description || 
+                                     task.details || 
+                                     task.content?.substring(0, 200) || 
+                                     'No description available';
+      
+      // Extract task type/category
+      parsedTask.taskType = determineTaskType(parsedTask);
+      
+    } catch (error) {
+      console.warn('Error parsing task content:', error);
+      // Fallback to original task structure
+      parsedTask.displayTitle = task.title || task.name || 'Untitled Task';
+      parsedTask.displayDescription = task.description || task.details || 'No description available';
+      parsedTask.taskType = 'general';
+    }
+    
+    return parsedTask;
+  };
+
+  // Helper functions for content parsing
+  const extractTags = (content) => {
+    const tagRegex = /#(\w+)/g;
+    const matches = content.match(tagRegex);
+    return matches ? matches.map(tag => tag.substring(1)) : [];
+  };
+
+  const extractPriority = (content) => {
+    const priorityRegex = /priority:\s*(high|medium|low|urgent)/i;
+    const match = content.match(priorityRegex);
+    return match ? match[1].toLowerCase() : 'medium';
+  };
+
+  const extractEstimatedTime = (content) => {
+    const timeRegex = /(?:estimated?|time|duration):\s*(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|days?|d)/i;
+    const match = content.match(timeRegex);
+    if (match) {
+      const value = parseFloat(match[1]);
+      const unit = match[2].toLowerCase();
+      return unit.startsWith('d') ? value * 8 : value; // Convert days to hours
+    }
+    return null;
+  };
+
+  const determineTaskType = (task) => {
+    const content = (task.content || task.displayTitle + ' ' + task.displayDescription).toLowerCase();
+    
+    if (content.includes('bug') || content.includes('fix') || content.includes('error')) {
+      return 'bug';
+    }
+    if (content.includes('feature') || content.includes('implement') || content.includes('add')) {
+      return 'feature';
+    }
+    if (content.includes('review') || content.includes('test') || content.includes('qa')) {
+      return 'review';
+    }
+    if (content.includes('document') || content.includes('doc') || content.includes('readme')) {
+      return 'documentation';
+    }
+    if (content.includes('refactor') || content.includes('optimize') || content.includes('improve')) {
+      return 'improvement';
+    }
+    
+    return 'general';
   };
 
   const fetchQuestHiveTasks = async () => {
@@ -158,15 +278,16 @@ const Tasks = () => {
   };
 
   const getStatusIcon = (task) => {
-    if (task.completed || task.status === 'completed') return FiCheckCircle;
-    if (task.inProgress || task.status === 'IN_PROGRESS') return FiPlay;
+    if (task.completed || task.status === 'completed' || task.status === 'CLOSED') return FiCheckCircle;
+    if (task.inProgress || task.status === 'IN_PROGRESS' || task.status === 'in-progress') return FiPlay;
     if (task.blocked || task.status === 'blocked') return FiAlertCircle;
     return FiClock;
   };
 
   const formatQuestHiveTaskStatus = (task) => {
-    if (task.completed || task.status === 'CLOSED') return 'Completed';
-    if (task.inProgress || task.status === 'IN_PROGRESS') return 'In Progress';
+    if (task.completed || task.status === 'CLOSED' || task.status === 'completed') return 'Completed';
+    if (task.inProgress || task.status === 'IN_PROGRESS' || task.status === 'in-progress') return 'In Progress';
+    if (task.blocked || task.status === 'blocked') return 'Blocked';
     return 'To Do';
   };
 
@@ -176,10 +297,42 @@ const Tasks = () => {
   };
 
   const getStatusColor = (task) => {
-    if (task.completed || task.status === 'completed') return 'text-green-400';
-    if (task.inProgress || task.status === 'in-progress') return 'text-blue-400';
+    if (task.completed || task.status === 'completed' || task.status === 'CLOSED') return 'text-green-400';
+    if (task.inProgress || task.status === 'in-progress' || task.status === 'IN_PROGRESS') return 'text-blue-400';
     if (task.blocked || task.status === 'blocked') return 'text-red-400';
     return 'text-gray-400';
+  };
+
+  const getTaskTypeIcon = (taskType) => {
+    switch (taskType) {
+      case 'bug': return FiAlertCircle;
+      case 'feature': return FiTarget;
+      case 'review': return FiCheckCircle;
+      case 'documentation': return FiFileText;
+      case 'improvement': return FiCode;
+      default: return FiClock;
+    }
+  };
+
+  const getTaskTypeColor = (taskType) => {
+    switch (taskType) {
+      case 'bug': return 'text-red-400 bg-red-500/10 border-red-500/20';
+      case 'feature': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+      case 'review': return 'text-green-400 bg-green-500/10 border-green-500/20';
+      case 'documentation': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+      case 'improvement': return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
+      default: return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case 'urgent': return 'text-red-500 bg-red-500/10 border-red-500/20';
+      case 'high': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
+      case 'medium': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
+      case 'low': return 'text-green-500 bg-green-500/10 border-green-500/20';
+      default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
+    }
   };
 
   return (
@@ -225,10 +378,11 @@ const Tasks = () => {
               onChange={(e) => handleSprintChange(e.target.value)}
               className="w-full p-3 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-white focus:border-transparent"
             >
-              <option value="">Current Sprint</option>
+              <option value="">Current Sprint (Latest)</option>
               {sprints.map((sprint) => (
                 <option key={sprint.sprintId} value={sprint.sprintId}>
-                  Sprint {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                  {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
+                  {sprint === currentSprint && ' (Current)'}
                 </option>
               ))}
             </select>
@@ -294,12 +448,47 @@ const Tasks = () => {
               <div>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 pr-4">
+                    {/* Task Type Badge */}
+                    {task.taskType && (
+                      <div className="mb-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getTaskTypeColor(task.taskType)}`}>
+                          <SafeIcon icon={getTaskTypeIcon(task.taskType)} className="w-3 h-3 mr-1" />
+                          {task.taskType.charAt(0).toUpperCase() + task.taskType.slice(1)}
+                        </span>
+                      </div>
+                    )}
+                    
                     <h3 className="font-semibold text-white mb-2">
-                      {task.title || task.name || 'Untitled Task'}
+                      {task.displayTitle}
                     </h3>
-                    <p className="text-sm text-gray-400 mb-3">
-                      {task.description || task.details || 'No description available'}
+                    <p className="text-sm text-gray-400 mb-3 line-clamp-3">
+                      {task.displayDescription}
                     </p>
+
+                    {/* Tags */}
+                    {task.parsedContent?.tags && task.parsedContent.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {task.parsedContent.tags.slice(0, 3).map((tag, tagIndex) => (
+                          <span key={tagIndex} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-700 text-gray-300">
+                            #{tag}
+                          </span>
+                        ))}
+                        {task.parsedContent.tags.length > 3 && (
+                          <span className="text-xs text-gray-500">
+                            +{task.parsedContent.tags.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Priority */}
+                    {task.parsedContent?.priority && (
+                      <div className="mb-3">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.parsedContent.priority)}`}>
+                          Priority: {task.parsedContent.priority.charAt(0).toUpperCase() + task.parsedContent.priority.slice(1)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -329,10 +518,10 @@ const Tasks = () => {
                   )}
 
                   {/* Estimated Hours */}
-                  {task.estimatedHours && (
+                  {(task.estimatedHours || task.parsedContent?.estimatedTime) && (
                     <div className="flex items-center text-xs text-gray-500">
                       <SafeIcon icon={FiClock} className="w-3 h-3 mr-1" />
-                      Estimated: {task.estimatedHours}h
+                      Estimated: {task.estimatedHours || task.parsedContent.estimatedTime}h
                     </div>
                   )}
 
@@ -413,7 +602,7 @@ const Tasks = () => {
           className="mt-8 bg-gray-900 border border-gray-800 rounded-xl p-6"
         >
           <h3 className="text-lg font-semibold text-white mb-4">Sprint Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-white">
                 {questHiveTasks.length}
@@ -422,20 +611,41 @@ const Tasks = () => {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-400">
-                {questHiveTasks.filter(task => task.completed || task.status === 'completed').length}
+                {questHiveTasks.filter(task => 
+                  task.completed || 
+                  task.status === 'completed' || 
+                  task.status === 'CLOSED'
+                ).length}
               </div>
               <div className="text-sm text-gray-400">Completed</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-400">
-                {questHiveTasks.filter(task => task.inProgress || task.status === 'in-progress').length}
+                {questHiveTasks.filter(task => 
+                  task.inProgress || 
+                  task.status === 'in-progress' || 
+                  task.status === 'IN_PROGRESS'
+                ).length}
               </div>
               <div className="text-sm text-gray-400">In Progress</div>
             </div>
             <div className="text-center">
+              <div className="text-2xl font-bold text-red-400">
+                {questHiveTasks.filter(task => 
+                  task.blocked || 
+                  task.status === 'blocked'
+                ).length}
+              </div>
+              <div className="text-sm text-gray-400">Blocked</div>
+            </div>
+            <div className="text-center">
               <div className="text-2xl font-bold text-white">
                 {questHiveTasks.length > 0 
-                  ? Math.round((questHiveTasks.filter(task => task.completed || task.status === 'completed').length / questHiveTasks.length) * 100)
+                  ? Math.round((questHiveTasks.filter(task => 
+                      task.completed || 
+                      task.status === 'completed' || 
+                      task.status === 'CLOSED'
+                    ).length / questHiveTasks.length) * 100)
                   : 0
                 }%
               </div>

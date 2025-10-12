@@ -9,18 +9,36 @@ import * as HiIcons from 'react-icons/hi';
 import * as AiIcons from 'react-icons/ai';
 import * as BsIcons from 'react-icons/bs';
 
-const { FiTrendingUp, FiGift, FiUsers, FiCheckCircle, FiAlertCircle, FiUnlock, FiActivity, FiTarget, FiCpu, FiDatabase } = FiIcons;
+const {
+  FiTrendingUp,
+  FiGift,
+  FiUsers,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiUnlock,
+  FiActivity,
+  FiTarget,
+  FiCpu,
+  FiDatabase,
+  FiClock,
+  FiPlay,
+  FiRefreshCw,
+  FiExternalLink
+} = FiIcons;
 const { HiSparkles, HiLightningBolt, HiRocketLaunch } = HiIcons;
 const { AiOutlineDashboard } = AiIcons;
 const { BsGraphUp, BsShieldCheck } = BsIcons;
 
 const Dashboard = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, isFounder } = useAuth();
   const [stats, setStats] = useState({
     currentSprint: null,
     recentTransactions: [],
+    sprintStatistics: null,
+    userSprintData: null
   });
   const [loading, setLoading] = useState(true);
+  const [syncingSprintData, setSyncingSprintData] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [animatedValues, setAnimatedValues] = useState({
     sprintPoints: 0,
@@ -50,19 +68,61 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [sprintRes, transactionsRes] = await Promise.all([
+      const requests = [
         api.get('/sprints/current'),
-        api.get('/transactions/history?limit=5'),
-      ]);
-      setStats({
-        currentSprint: sprintRes.data,
-        recentTransactions: transactionsRes.data.transactions,
-      });
+        api.get('/transactions/history?limit=5')
+      ];
+
+      // Add founder-specific requests
+      if (isFounder) {
+        requests.push(api.get('/sprints/statistics'));
+      } else if (user?.questHiveUserId) {
+        requests.push(api.get('/sprints/my-points'));
+      }
+
+      const responses = await Promise.all(requests);
+      
+      const newStats = {
+        currentSprint: responses[0].data,
+        recentTransactions: responses[1].data.transactions || [],
+      };
+
+      if (isFounder) {
+        newStats.sprintStatistics = responses[2]?.data;
+      } else if (user?.questHiveUserId) {
+        newStats.userSprintData = responses[2]?.data;
+        
+        // Update user context with latest sprint data
+        if (responses[2]?.data) {
+          updateUser({
+            sprintPoints: responses[2].data.sprintPoints,
+            isEligible: responses[2].data.sprintPoints >= 8
+          });
+        }
+      }
+
+      setStats(newStats);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       toast.error('Could not load dashboard data.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncSprintData = async () => {
+    if (!isFounder) return;
+    
+    setSyncingSprintData(true);
+    try {
+      await api.post('/sprints/sync');
+      toast.success('Sprint data synced successfully!');
+      fetchDashboardData(); // Refresh data
+    } catch (error) {
+      toast.error('Failed to sync sprint data');
+      console.error('Sprint sync error:', error);
+    } finally {
+      setSyncingSprintData(false);
     }
   };
 
@@ -150,6 +210,10 @@ const Dashboard = () => {
     );
   }
 
+  // Get current sprint data for display
+  const currentSprintData = stats.userSprintData || user?.currentSprintData || {};
+  const taskBreakdown = currentSprintData.taskBreakdown || { completed: 0, inProgress: 0, todo: 0, blocked: 0 };
+
   return (
     <div className="min-h-screen text-white overflow-hidden relative">
       {/* Background Effects */}
@@ -194,15 +258,62 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500 mb-1">System Status</div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-white font-medium">ONLINE</span>
+            <div className="flex items-center space-x-4">
+              {/* Founder sync button */}
+              {isFounder && (
+                <button
+                  onClick={handleSyncSprintData}
+                  disabled={syncingSprintData}
+                  className="flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all disabled:opacity-50"
+                >
+                  <SafeIcon 
+                    icon={FiRefreshCw} 
+                    className={`w-4 h-4 mr-2 ${syncingSprintData ? 'animate-spin' : ''}`} 
+                  />
+                  {syncingSprintData ? 'Syncing...' : 'Sync Sprint Data'}
+                </button>
+              )}
+              <div className="text-right">
+                <div className="text-sm text-gray-500 mb-1">System Status</div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-white font-medium">ONLINE</span>
+                </div>
               </div>
             </div>
           </div>
         </motion.div>
+
+        {/* Sprint Info Banner */}
+        {stats.currentSprint && (
+          <motion.div className="mb-8" variants={cardVariants}>
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <SafeIcon icon={FiExternalLink} className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">
+                      Current Sprint #{stats.currentSprint.sprintNumber}
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      {new Date(stats.currentSprint.startDate).toLocaleDateString()} - {new Date(stats.currentSprint.endDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {!isFounder && currentSprintData.totalTasks > 0 && (
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-white">
+                      {currentSprintData.completedTasks}/{currentSprintData.totalTasks}
+                    </div>
+                    <div className="text-sm text-gray-400">Tasks Completed</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Tab Navigation */}
         <motion.div className="mb-8" variants={cardVariants}>
@@ -233,15 +344,17 @@ const Dashboard = () => {
               max: 12,
               color: 'from-gray-100 to-gray-300',
               bgColor: 'bg-gray-800',
-              borderColor: 'border-gray-800'
+              borderColor: 'border-gray-800',
+              subtitle: isFounder ? 'System Average' : `${currentSprintData.completionRate || 0}% completion`
             },
             {
               icon: FiGift,
               label: 'Reward Points',
-              value: animatedValues.rewardPoints,
+              value: isFounder ? '∞' : animatedValues.rewardPoints,
               color: 'from-gray-100 to-gray-300',
               bgColor: 'bg-gray-800',
-              borderColor: 'border-gray-800'
+              borderColor: 'border-gray-800',
+              subtitle: isFounder ? 'Unlimited' : 'Available to send'
             },
             {
               icon: FiTrendingUp,
@@ -249,7 +362,8 @@ const Dashboard = () => {
               value: animatedValues.totalGiven,
               color: 'from-gray-100 to-gray-300',
               bgColor: 'bg-gray-800',
-              borderColor: 'border-gray-800'
+              borderColor: 'border-gray-800',
+              subtitle: 'Total sent'
             },
             {
               icon: FiUsers,
@@ -257,7 +371,8 @@ const Dashboard = () => {
               value: animatedValues.totalReceived,
               color: 'from-gray-100 to-gray-300',
               bgColor: 'bg-gray-800',
-              borderColor: 'border-gray-800'
+              borderColor: 'border-gray-800',
+              subtitle: 'Total received'
             }
           ].map((stat, index) => (
             <motion.div
@@ -278,10 +393,15 @@ const Dashboard = () => {
                 </div>
                 <div className="text-gray-400 text-sm mb-2">{stat.label}</div>
                 <div className="text-3xl font-bold text-white">
-                  <AnimatedNumber value={stat.value} />
-                  {stat.max && <span className="text-gray-500 text-lg ml-2">/ {stat.max}</span>}
+                  {typeof stat.value === 'string' ? stat.value : <AnimatedNumber value={stat.value} />}
+                  {stat.max && typeof stat.value === 'number' && (
+                    <span className="text-gray-500 text-lg ml-2">/ {stat.max}</span>
+                  )}
                 </div>
-                {stat.max && (
+                {stat.subtitle && (
+                  <div className="text-xs text-gray-500 mt-1">{stat.subtitle}</div>
+                )}
+                {stat.max && typeof stat.value === 'number' && (
                   <div className="mt-3">
                     <div className="w-full bg-gray-800 rounded-full h-2">
                       <div 
@@ -298,7 +418,7 @@ const Dashboard = () => {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Mission Control */}
+          {/* Mission Control / Sprint Progress */}
           <motion.div variants={cardVariants} className="lg:col-span-2">
             <div className="bg-gray-900 border border-gray-800 rounded-3xl p-8 hover:border-gray-700 transition-all duration-300">
               <div className="flex items-center justify-between mb-8">
@@ -307,102 +427,197 @@ const Dashboard = () => {
                     <SafeIcon icon={HiRocketLaunch} className="w-6 h-6 text-black" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Mission Control</h2>
-                    <p className="text-gray-400">Track your progress</p>
+                    <h2 className="text-2xl font-bold text-white">
+                      {isFounder ? 'Sprint Overview' : 'Mission Control'}
+                    </h2>
+                    <p className="text-gray-400">
+                      {isFounder ? 'System-wide sprint statistics' : 'Track your progress'}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-white">#{stats.currentSprint?.sprintNumber || 1}</div>
+                  <div className="text-3xl font-bold text-white">
+                    #{stats.currentSprint?.sprintNumber || 1}
+                  </div>
                   <div className="text-sm text-gray-500">Current Sprint</div>
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="mb-8">
-                <div className="relative h-4 bg-gray-800 rounded-full overflow-hidden">
-                  <div 
-                    className="absolute inset-0 bg-white rounded-full"
-                    style={{ width: `${(user?.sprintPoints / 12) * 100}%` }}
-                  >
-                    <div className="absolute inset-0 bg-black/20 animate-pulse"></div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-bold text-black mix-blend-difference">
-                      {Math.round((user?.sprintPoints / 12) * 100)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between mt-2">
-                  <span className="text-sm text-gray-400">Progress</span>
-                  <span className="text-sm text-white font-medium">{user?.sprintPoints}/12 points</span>
-                </div>
-              </div>
-
-              {/* Status Cards */}
-              <div className="grid grid-cols-2 gap-6 mb-8">
-                <div className={`p-6 rounded-2xl border-2 ${
-                  user?.isEligible ? 'border-gray-600 bg-gray-800' : 'border-gray-700 bg-gray-800'
-                }`}>
-                  <div className="flex items-center space-x-3 mb-3">
-                    <SafeIcon 
-                      icon={user?.isEligible ? BsShieldCheck : FiAlertCircle} 
-                      className={`w-6 h-6 ${user?.isEligible ? 'text-white' : 'text-gray-400'}`} 
-                    />
-                    <span className={`font-semibold ${user?.isEligible ? 'text-white' : 'text-gray-400'}`}>
-                      {user?.isEligible ? 'Elite Status' : 'Training Mode'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-300">
-                    {user?.isEligible 
-                      ? 'You have qualified for weekend reward unlocking!' 
-                      : 'Complete more tasks to achieve elite status.'
-                    }
-                  </p>
-                </div>
-
-                <div className="p-6 rounded-2xl border-2 border-gray-700 bg-gray-800">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <SafeIcon icon={HiSparkles} className="w-6 h-6 text-white" />
-                    <span className="font-semibold text-white">Score</span>
-                  </div>
-                  <div className="text-2xl font-bold text-white mb-1">
-                    {user?.aiCheckResult?.confidenceScore ? `${user.aiCheckResult.confidenceScore}%` : 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-400">Performance Rating</div>
-                </div>
-              </div>
-
-              {/* Unlock Button or Status */}
-              {user?.isEligible && !user?.unlockedThisSprint && (
-                <motion.button
-                  whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255,255,255,0.2)" }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleUnlockPoints}
-                  disabled={!isWeekend()}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg transition-all duration-300 ${
-                    isWeekend()
-                      ? 'bg-white text-black shadow-2xl hover:bg-gray-100'
-                      : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-center space-x-3">
-                    <SafeIcon icon={FiUnlock} className="w-6 h-6" />
-                    <span>{isWeekend() ? 'Unlock 500 Points' : 'Weekend Activation Required'}</span>
-                    {isWeekend() && <SafeIcon icon={HiLightningBolt} className="w-6 h-6 animate-pulse" />}
-                  </div>
-                </motion.button>
-              )}
-
-              {user?.unlockedThisSprint && (
-                <div className="bg-gray-800 border-2 border-gray-700 rounded-2xl p-6">
-                  <div className="flex items-center space-x-3">
-                    <SafeIcon icon={FiCheckCircle} className="w-8 h-8 text-white" />
-                    <div>
-                      <div className="text-white font-bold text-lg">Points Unlocked!</div>
-                      <div className="text-gray-300 text-sm">You have successfully claimed your rewards this sprint.</div>
+              {!isFounder ? (
+                <>
+                  {/* Employee Progress */}
+                  <div className="mb-8">
+                    <div className="relative h-4 bg-gray-800 rounded-full overflow-hidden">
+                      <div 
+                        className="absolute inset-0 bg-white rounded-full"
+                        style={{ width: `${(user?.sprintPoints / 12) * 100}%` }}
+                      >
+                        <div className="absolute inset-0 bg-black/20 animate-pulse"></div>
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-bold text-black mix-blend-difference">
+                          {Math.round((user?.sprintPoints / 12) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-sm text-gray-400">Progress</span>
+                      <span className="text-sm text-white font-medium">
+                        {user?.sprintPoints}/12 points
+                      </span>
                     </div>
                   </div>
+
+                  {/* Task Breakdown for Employees */}
+                  {currentSprintData.totalTasks > 0 && (
+                    <div className="grid grid-cols-4 gap-4 mb-8">
+                      <div className="text-center p-4 bg-gray-800 rounded-lg">
+                        <SafeIcon icon={FiCheckCircle} className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                        <div className="text-xl font-bold text-white">{taskBreakdown.completed}</div>
+                        <div className="text-xs text-gray-400">Completed</div>
+                      </div>
+                      <div className="text-center p-4 bg-gray-800 rounded-lg">
+                        <SafeIcon icon={FiPlay} className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                        <div className="text-xl font-bold text-white">{taskBreakdown.inProgress}</div>
+                        <div className="text-xs text-gray-400">In Progress</div>
+                      </div>
+                      <div className="text-center p-4 bg-gray-800 rounded-lg">
+                        <SafeIcon icon={FiClock} className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                        <div className="text-xl font-bold text-white">{taskBreakdown.todo}</div>
+                        <div className="text-xs text-gray-400">To Do</div>
+                      </div>
+                      <div className="text-center p-4 bg-gray-800 rounded-lg">
+                        <SafeIcon icon={FiAlertCircle} className="w-6 h-6 text-red-400 mx-auto mb-2" />
+                        <div className="text-xl font-bold text-white">{taskBreakdown.blocked}</div>
+                        <div className="text-xs text-gray-400">Blocked</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status Cards */}
+                  <div className="grid grid-cols-2 gap-6 mb-8">
+                    <div className={`p-6 rounded-2xl border-2 ${
+                      user?.isEligible 
+                        ? 'border-gray-600 bg-gray-800' 
+                        : 'border-gray-700 bg-gray-800'
+                    }`}>
+                      <div className="flex items-center space-x-3 mb-3">
+                        <SafeIcon 
+                          icon={user?.isEligible ? BsShieldCheck : FiAlertCircle} 
+                          className={`w-6 h-6 ${user?.isEligible ? 'text-white' : 'text-gray-400'}`} 
+                        />
+                        <span className={`font-semibold ${user?.isEligible ? 'text-white' : 'text-gray-400'}`}>
+                          {user?.isEligible ? 'Elite Status' : 'Training Mode'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-300">
+                        {user?.isEligible 
+                          ? 'You have qualified for weekend reward unlocking!'
+                          : 'Complete more tasks to achieve elite status.'
+                        }
+                      </p>
+                    </div>
+
+                    <div className="p-6 rounded-2xl border-2 border-gray-700 bg-gray-800">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <SafeIcon icon={HiSparkles} className="w-6 h-6 text-white" />
+                        <span className="font-semibold text-white">Completion Rate</span>
+                      </div>
+                      <div className="text-2xl font-bold text-white mb-1">
+                        {currentSprintData.completionRate || 0}%
+                      </div>
+                      <div className="text-sm text-gray-400">Task Performance</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Founder System Statistics */
+                <div className="space-y-6">
+                  {stats.sprintStatistics && (
+                    <>
+                      <div className="grid grid-cols-3 gap-6">
+                        <div className="text-center p-4 bg-gray-800 rounded-lg">
+                          <div className="text-2xl font-bold text-white">
+                            {stats.sprintStatistics.totalEmployees}
+                          </div>
+                          <div className="text-sm text-gray-400">Total Employees</div>
+                        </div>
+                        <div className="text-center p-4 bg-gray-800 rounded-lg">
+                          <div className="text-2xl font-bold text-green-400">
+                            {stats.sprintStatistics.eligibleEmployees}
+                          </div>
+                          <div className="text-sm text-gray-400">Eligible</div>
+                        </div>
+                        <div className="text-center p-4 bg-gray-800 rounded-lg">
+                          <div className="text-2xl font-bold text-white">
+                            {stats.sprintStatistics.eligibilityRate}%
+                          </div>
+                          <div className="text-sm text-gray-400">Eligibility Rate</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="p-4 bg-gray-800 rounded-lg">
+                          <div className="text-lg font-semibold text-white mb-2">Task Progress</div>
+                          <div className="text-2xl font-bold text-white">
+                            {stats.sprintStatistics.completedTasks}/{stats.sprintStatistics.totalTasks}
+                          </div>
+                          <div className="text-sm text-gray-400">Completed Tasks</div>
+                        </div>
+                        <div className="p-4 bg-gray-800 rounded-lg">
+                          <div className="text-lg font-semibold text-white mb-2">Average Points</div>
+                          <div className="text-2xl font-bold text-white">
+                            {stats.sprintStatistics.averageSprintPoints}
+                          </div>
+                          <div className="text-sm text-gray-400">Sprint Points</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
+              )}
+
+              {/* Unlock Button or Status (Employee only) */}
+              {!isFounder && (
+                <>
+                  {user?.isEligible && !user?.unlockedThisSprint && (
+                    <motion.button
+                      whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(255,255,255,0.2)" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleUnlockPoints}
+                      disabled={!isWeekend()}
+                      className={`w-full py-4 rounded-2xl font-bold text-lg transition-all duration-300 ${
+                        isWeekend()
+                          ? 'bg-white text-black shadow-2xl hover:bg-gray-100'
+                          : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center space-x-3">
+                        <SafeIcon icon={FiUnlock} className="w-6 h-6" />
+                        <span>
+                          {isWeekend() ? 'Unlock 500 Points' : 'Weekend Activation Required'}
+                        </span>
+                        {isWeekend() && (
+                          <SafeIcon icon={HiLightningBolt} className="w-6 h-6 animate-pulse" />
+                        )}
+                      </div>
+                    </motion.button>
+                  )}
+
+                  {user?.unlockedThisSprint && (
+                    <div className="bg-gray-800 border-2 border-gray-700 rounded-2xl p-6">
+                      <div className="flex items-center space-x-3">
+                        <SafeIcon icon={FiCheckCircle} className="w-8 h-8 text-white" />
+                        <div>
+                          <div className="text-white font-bold text-lg">Points Unlocked!</div>
+                          <div className="text-gray-300 text-sm">
+                            You have successfully claimed your rewards this sprint.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </motion.div>
@@ -431,7 +646,9 @@ const Dashboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
                         className={`p-4 rounded-xl border ${
-                          isSent ? 'border-gray-700 bg-gray-800' : 'border-gray-700 bg-gray-800'
+                          isSent 
+                            ? 'border-gray-700 bg-gray-800' 
+                            : 'border-gray-700 bg-gray-800'
                         } hover:border-gray-600 transition-all duration-300`}
                       >
                         <div className="flex items-center justify-between">
@@ -456,7 +673,9 @@ const Dashboard = () => {
                               </div>
                             </div>
                           </div>
-                          <div className={`text-lg font-bold ${isSent ? 'text-gray-400' : 'text-white'}`}>
+                          <div className={`text-lg font-bold ${
+                            isSent ? 'text-gray-400' : 'text-white'
+                          }`}>
                             {isSent ? '-' : '+'}{transaction.points}
                           </div>
                         </div>
@@ -480,19 +699,28 @@ const Dashboard = () => {
           0% { transform: translate(0, 0); }
           100% { transform: translate(50px, 50px); }
         }
+        
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }
+        
         .custom-scrollbar::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.05);
           border-radius: 3px;
         }
+        
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: white;
           border-radius: 3px;
         }
-        .delay-1000 { animation-delay: 1s; }
-        .delay-2000 { animation-delay: 2s; }
+        
+        .delay-1000 {
+          animation-delay: 1s;
+        }
+        
+        .delay-2000 {
+          animation-delay: 2s;
+        }
       `}</style>
     </div>
   );

@@ -26,7 +26,9 @@ const userSchema = new mongoose.Schema({
   },
   sprintPoints: {
     type: Number,
-    default: 12
+    default: 0,
+    min: 0,
+    max: 12
   },
   rewardPoints: {
     type: Number,
@@ -62,8 +64,8 @@ const userSchema = new mongoose.Schema({
   questHiveUserId: {
     type: String,
     default: null,
-    sparse: true, // Allows multiple null values
-    index: true // Add index for faster lookups
+    sparse: true,
+    index: true
   },
   questHiveData: {
     entityId: String,
@@ -74,6 +76,47 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
+  },
+  // Sprint tracking data
+  sprintData: {
+    completedTasks: {
+      type: Number,
+      default: 0
+    },
+    totalTasks: {
+      type: Number,
+      default: 0
+    },
+    completionRate: {
+      type: Number,
+      default: 0
+    },
+    taskBreakdown: {
+      completed: {
+        type: Number,
+        default: 0
+      },
+      inProgress: {
+        type: Number,
+        default: 0
+      },
+      todo: {
+        type: Number,
+        default: 0
+      },
+      blocked: {
+        type: Number,
+        default: 0
+      }
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    },
+    currentSprintId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Sprint'
+    }
   }
 }, {
   timestamps: true
@@ -82,7 +125,7 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-
+  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -113,6 +156,19 @@ userSchema.methods.syncWithQuestHive = function(questHiveUser) {
   }
 };
 
+// Method to update sprint data
+userSchema.methods.updateSprintData = function(sprintData) {
+  this.sprintData = {
+    ...this.sprintData,
+    ...sprintData,
+    lastUpdated: new Date()
+  };
+  
+  // Update sprint points based on task completion
+  this.sprintPoints = sprintData.sprintPoints || this.sprintPoints;
+  this.isEligible = this.sprintPoints >= 8; // Threshold for eligibility
+};
+
 // Static method to find user by Quest Hive ID
 userSchema.statics.findByQuestHiveId = function(questHiveUserId) {
   return this.findOne({ questHiveUserId });
@@ -121,6 +177,20 @@ userSchema.statics.findByQuestHiveId = function(questHiveUserId) {
 // Static method to get users with Quest Hive mapping
 userSchema.statics.findMappedUsers = function() {
   return this.find({ questHiveUserId: { $ne: null } });
+};
+
+// Static method to get sprint statistics for all users
+userSchema.statics.getSprintStatistics = async function() {
+  const users = await this.find({ role: 'employee', questHiveUserId: { $ne: null } });
+  
+  return {
+    totalUsers: users.length,
+    eligibleUsers: users.filter(user => user.isEligible).length,
+    averageSprintPoints: users.length > 0 ? 
+      users.reduce((sum, user) => sum + user.sprintPoints, 0) / users.length : 0,
+    totalTasks: users.reduce((sum, user) => sum + (user.sprintData?.totalTasks || 0), 0),
+    completedTasks: users.reduce((sum, user) => sum + (user.sprintData?.completedTasks || 0), 0)
+  };
 };
 
 export default mongoose.model('User', userSchema);
