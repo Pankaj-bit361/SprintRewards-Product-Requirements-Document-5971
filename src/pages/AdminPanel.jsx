@@ -5,7 +5,21 @@ import SafeIcon from '@/common/SafeIcon';
 import api from '@/api/axiosConfig.js';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiUsers, FiUserPlus, FiEdit3, FiTrash2, FiTrendingUp, FiGift, FiCheckCircle, FiAlertCircle, FiClock, FiCheck, FiX, FiRefreshCw, FiLink, FiExternalLink } = FiIcons;
+const {
+  FiUsers,
+  FiEdit3,
+  FiTrash2,
+  FiTrendingUp,
+  FiGift,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiClock,
+  FiCheck,
+  FiX,
+  FiRefreshCw,
+  FiLink,
+  FiExternalLink
+} = FiIcons;
 
 const AdminPanel = () => {
   const [employees, setEmployees] = useState([]);
@@ -13,18 +27,9 @@ const AdminPanel = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [questHiveLoading, setQuestHiveLoading] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQuestHiveModal, setShowQuestHiveModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [activeTab, setActiveTab] = useState('employees');
-  
-  const [employeeForm, setEmployeeForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    questHiveUserId: ''
-  });
-
   const [questHiveForm, setQuestHiveForm] = useState({
     questHiveUserId: '',
     password: ''
@@ -66,44 +71,16 @@ const AdminPanel = () => {
     }
   };
 
-  const handleAddEmployee = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post('/users', employeeForm);
-      toast.success('Employee added successfully!');
-      resetForm();
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to add employee');
-    }
-  };
-
   const handleCreateFromQuestHive = async (e) => {
     e.preventDefault();
     try {
       await api.post('/users/from-quest-hive', questHiveForm);
       toast.success('Employee created from Quest Hive user successfully!');
-      resetQuestHiveForm();
+      closeQuestHiveModal();
       fetchData();
       fetchQuestHiveUsers(); // Refresh available users
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create employee from Quest Hive user');
-    }
-  };
-
-  const handleUpdateEmployee = async (e) => {
-    e.preventDefault();
-    try {
-      const updateData = { ...employeeForm };
-      if (!updateData.password) {
-        delete updateData.password;
-      }
-      await api.put(`/users/${editingEmployee._id}`, updateData);
-      toast.success('Employee updated successfully!');
-      resetForm();
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to update employee');
     }
   };
 
@@ -139,39 +116,17 @@ const AdminPanel = () => {
     }
   };
 
-  const resetForm = () => {
-    setEmployeeForm({
-      name: '',
-      email: '',
-      password: '',
-      questHiveUserId: ''
-    });
-    setEditingEmployee(null);
-    setShowCreateModal(false);
+  const openQuestHiveModal = () => {
+    fetchQuestHiveUsers();
+    setShowQuestHiveModal(true);
   };
 
-  const resetQuestHiveForm = () => {
+  const closeQuestHiveModal = () => {
+    setShowQuestHiveModal(false);
     setQuestHiveForm({
       questHiveUserId: '',
       password: ''
     });
-    setShowQuestHiveModal(false);
-  };
-
-  const openEditModal = (employee) => {
-    setEmployeeForm({
-      name: employee.name,
-      email: employee.email,
-      password: '',
-      questHiveUserId: employee.questHiveUserId || ''
-    });
-    setEditingEmployee(employee);
-    setShowCreateModal(true);
-  };
-
-  const openQuestHiveModal = () => {
-    fetchQuestHiveUsers();
-    setShowQuestHiveModal(true);
   };
 
   if (loading) {
@@ -193,28 +148,17 @@ const AdminPanel = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-4xl font-bold text-white mb-2">Admin Panel</h1>
-          <p className="text-gray-400">Manage employees and monitor system activity</p>
+          <p className="text-gray-400">Manage Quest Hive employees and monitor system activity</p>
         </div>
-        
         <div className="flex items-center space-x-4">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={openQuestHiveModal}
-            className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-lg"
+            className="flex items-center px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-all shadow-lg"
           >
             <SafeIcon icon={FiLink} className="w-5 h-5 mr-2" />
             Add from Quest Hive
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-all shadow-lg"
-          >
-            <SafeIcon icon={FiUserPlus} className="w-5 h-5 mr-2" />
-            Add Employee
           </motion.button>
         </div>
       </div>
@@ -270,7 +214,7 @@ const AdminPanel = () => {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-400">Quest Hive Linked</p>
+              <p className="text-sm font-medium text-gray-400">Quest Hive Users</p>
               <p className="text-2xl font-bold text-white">{questHiveMappedEmployees}</p>
             </div>
           </div>
@@ -347,10 +291,15 @@ const AdminPanel = () => {
           </div>
           <div className="p-6 space-y-4">
             {pendingTransactions.map(tx => (
-              <div key={tx._id} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+              <div
+                key={tx._id}
+                className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
+              >
                 <div>
                   <p className="text-white">{tx.fromUserId.name} → {tx.toUserId.name}</p>
-                  <p className="text-sm text-gray-400">{tx.points} points - <span className="italic">"{tx.message || 'No message'}"</span></p>
+                  <p className="text-sm text-gray-400">
+                    {tx.points} points - <span className="italic">"{tx.message || 'No message'}"</span>
+                  </p>
                 </div>
                 <div className="flex space-x-2">
                   <button
@@ -381,7 +330,7 @@ const AdminPanel = () => {
           className="bg-gray-900 border border-gray-800 rounded-xl"
         >
           <div className="p-6 border-b border-gray-800">
-            <h2 className="text-lg font-semibold text-white">Employees</h2>
+            <h2 className="text-lg font-semibold text-white">Quest Hive Employees</h2>
           </div>
           <div className="p-6">
             {employees.filter(e => e.role === 'employee').length > 0 ? (
@@ -407,60 +356,54 @@ const AdminPanel = () => {
                             {employee.name.charAt(0).toUpperCase()}
                           </span>
                         )}
-                        {employee.questHiveUserId && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                            <SafeIcon icon={FiLink} className="w-2 h-2 text-white" />
-                          </div>
-                        )}
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                          <SafeIcon icon={FiLink} className="w-2 h-2 text-white" />
+                        </div>
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
                           <p className="font-medium text-white">{employee.name}</p>
-                          {employee.questHiveUserId && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
-                              <SafeIcon icon={FiExternalLink} className="w-3 h-3 mr-1" />
-                              Quest Hive
-                            </span>
-                          )}
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                            <SafeIcon icon={FiExternalLink} className="w-3 h-3 mr-1" />
+                            Quest Hive
+                          </span>
                         </div>
                         <p className="text-sm text-gray-500">{employee.email}</p>
                         <div className="flex items-center space-x-4 mt-1">
                           <span className="text-xs text-gray-500">Sprint: {employee.sprintPoints}/12</span>
                           <span className="text-xs text-gray-500">Rewards: {employee.rewardPoints}</span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            employee.isEligible ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-400'
-                          }`}>
-                            <SafeIcon icon={employee.isEligible ? FiCheckCircle : FiAlertCircle} className="w-3 h-3 mr-1" />
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              employee.isEligible
+                                ? 'bg-gray-700 text-white'
+                                : 'bg-gray-800 text-gray-400'
+                            }`}
+                          >
+                            <SafeIcon
+                              icon={employee.isEligible ? FiCheckCircle : FiAlertCircle}
+                              className="w-3 h-3 mr-1"
+                            />
                             {employee.isEligible ? 'Eligible' : 'Not Eligible'}
                           </span>
                         </div>
                         {employee.questHiveData && (
                           <div className="text-xs text-gray-500 mt-1">
-                            Team: {employee.questHiveData.team?.join(', ') || 'N/A'} | 
-                            Role: {employee.questHiveData.companyRole || 'N/A'}
+                            Quest Hive ID: {employee.questHiveUserId} | Team: {employee.questHiveData.team?.join(', ') || 'N/A'} | Role: {employee.questHiveData.companyRole || 'N/A'}
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {employee.questHiveUserId && (
-                        <button
-                          onClick={() => handleSyncWithQuestHive(employee._id)}
-                          className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
-                          title="Sync with Quest Hive"
-                        >
-                          <SafeIcon icon={FiRefreshCw} className="w-4 h-4" />
-                        </button>
-                      )}
                       <button
-                        onClick={() => openEditModal(employee)}
-                        className="p-2 text-gray-400 hover:text-white transition-colors"
+                        onClick={() => handleSyncWithQuestHive(employee._id)}
+                        className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
+                        title="Sync with Quest Hive"
                       >
-                        <SafeIcon icon={FiEdit3} className="w-4 h-4" />
+                        <SafeIcon icon={FiRefreshCw} className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteEmployee(employee._id)}
-                        className="p-2 text-gray-400 hover:text-white transition-colors"
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
                       >
                         <SafeIcon icon={FiTrash2} className="w-4 h-4" />
                       </button>
@@ -471,7 +414,8 @@ const AdminPanel = () => {
             ) : (
               <div className="text-center py-8">
                 <SafeIcon icon={FiUsers} className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500">No employees yet</p>
+                <p className="text-gray-500">No Quest Hive employees yet</p>
+                <p className="text-gray-600 text-sm">Add employees from Quest Hive to get started.</p>
               </div>
             )}
           </div>
@@ -492,30 +436,33 @@ const AdminPanel = () => {
           <div className="p-6">
             {transactions.filter(t => t.status === 'approved').length > 0 ? (
               <div className="space-y-4">
-                {transactions.filter(t => t.status === 'approved').slice(0, 10).map((transaction, index) => (
-                  <motion.div
-                    key={transaction._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                        <SafeIcon icon={FiGift} className="w-4 h-4 text-white" />
+                {transactions
+                  .filter(t => t.status === 'approved')
+                  .slice(0, 10)
+                  .map((transaction, index) => (
+                    <motion.div
+                      key={transaction._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
+                          <SafeIcon icon={FiGift} className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            {transaction.fromUserId.name} → {transaction.toUserId.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(transaction.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">
-                          {transaction.fromUserId.name} → {transaction.toUserId.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(transaction.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold text-white">{transaction.points} pts</span>
-                  </motion.div>
-                ))}
+                      <span className="text-sm font-bold text-white">{transaction.points} pts</span>
+                    </motion.div>
+                  ))}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -525,87 +472,6 @@ const AdminPanel = () => {
             )}
           </div>
         </motion.div>
-      )}
-
-      {/* Create/Edit Employee Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-900 border border-gray-800 rounded-xl max-w-md w-full p-6"
-          >
-            <h3 className="text-lg font-semibold text-white mb-4">
-              {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
-            </h3>
-            <form onSubmit={editingEmployee ? handleUpdateEmployee : handleAddEmployee} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  value={employeeForm.name}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
-                  className="w-full p-3 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-white focus:border-transparent"
-                  placeholder="Enter full name"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={employeeForm.email}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
-                  className="w-full p-3 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-white focus:border-transparent"
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password {editingEmployee && "(leave blank to keep current)"}
-                </label>
-                <input
-                  type="password"
-                  value={employeeForm.password}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
-                  className="w-full p-3 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-white focus:border-transparent"
-                  placeholder="Enter password"
-                  required={!editingEmployee}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Quest Hive User ID (Optional)</label>
-                <input
-                  type="text"
-                  value={employeeForm.questHiveUserId}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, questHiveUserId: e.target.value })}
-                  className="w-full p-3 border border-gray-700 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-white focus:border-transparent"
-                  placeholder="Enter Quest Hive User ID"
-                />
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="flex-1 px-4 py-2 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200 transition-all"
-                >
-                  {editingEmployee ? 'Update Employee' : 'Add Employee'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
       )}
 
       {/* Quest Hive User Selection Modal */}
@@ -618,13 +484,23 @@ const AdminPanel = () => {
           >
             <div className="p-6 border-b border-gray-800">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Create Employee from Quest Hive User</h3>
-                <button
-                  onClick={() => fetchQuestHiveUsers()}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
-                >
-                  <SafeIcon icon={FiRefreshCw} className="w-4 h-4" />
-                </button>
+                <h3 className="text-lg font-semibold text-white">Add Employee from Quest Hive</h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={fetchQuestHiveUsers}
+                    className="p-2 text-gray-400 hover:text-white transition-colors"
+                    title="Refresh"
+                  >
+                    <SafeIcon icon={FiRefreshCw} className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={closeQuestHiveModal}
+                    className="p-2 text-gray-400 hover:text-white transition-colors"
+                    title="Close"
+                  >
+                    <SafeIcon icon={FiX} className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -664,6 +540,7 @@ const AdminPanel = () => {
                           <p className="font-medium text-white">{qhUser.name}</p>
                           <p className="text-sm text-gray-400">{qhUser.email}</p>
                           <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-gray-500">ID: {qhUser.userId}</span>
                             <span className="text-xs text-gray-500">Role: {qhUser.companyRole || qhUser.role}</span>
                             {qhUser.team && (
                               <span className="text-xs text-gray-500">Team: {qhUser.team.join(', ')}</span>
@@ -696,11 +573,10 @@ const AdminPanel = () => {
                     required
                   />
                 </div>
-
                 <div className="flex space-x-3">
                   <button
                     type="button"
-                    onClick={resetQuestHiveForm}
+                    onClick={closeQuestHiveModal}
                     className="flex-1 px-4 py-2 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
                   >
                     Cancel
@@ -709,7 +585,7 @@ const AdminPanel = () => {
                     type="submit"
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
                   >
-                    Create Employee
+                    Add Employee
                   </button>
                 </div>
               </form>
