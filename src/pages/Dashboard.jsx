@@ -421,8 +421,8 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
-                {stats.recentTransactions.length > 0 ? (
-                  stats.recentTransactions.map((transaction, index) => {
+                {stats?.recentTransactions?.length > 0 ? (
+                  stats?.recentTransactions?.map((transaction, index) => {
                     const isSent = transaction.fromUserId._id === user?.id;
                     return (
                       <motion.div
