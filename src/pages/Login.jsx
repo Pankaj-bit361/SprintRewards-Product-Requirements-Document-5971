@@ -226,22 +226,7 @@ const Login = () => {
                   </motion.button>
                 </form>
 
-                <div className="mt-8 p-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
-                  <p className="text-sm font-medium text-gray-300 mb-3">Demo Credentials:</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                      <span className="text-gray-400">Founder:</span>
-                      <code className="text-white bg-white/10 px-2 py-1 rounded">founder@example.com</code>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                      <span className="text-gray-400">Employee:</span>
-                      <code className="text-white bg-white/10 px-2 py-1 rounded">employee@example.com</code>
-                    </div>
-                    <div className="text-center pt-2">
-                      <code className="text-xs text-gray-500">Password: password123</code>
-                    </div>
-                  </div>
-                </div>
+               
               </motion.div>
               <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-2xl animate-pulse"></div>
               <div className="absolute -bottom-10 -left-10 w-20 h-20 bg-gradient-to-br from-pink-500/20 to-orange-500/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
