@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "lint:error": "eslint . --quiet",
     "preview": "vite preview",
-    "install:backend": "cd backend && npm install"
+    "install:backend": "cd backend && npm install",
+    "seed": "cd backend && npm run seed"
   },
   "dependencies": {
     "@questlabs/react-sdk": "latest",
