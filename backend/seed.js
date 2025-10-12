@@ -25,7 +25,8 @@ const seedFounder = async () => {
         email: founderEmail,
         password: 'shubham@123',
         role: 'founder',
-        isEligible: true, // Eligible for rewards by default
+        sprintPoints: 0,
+        isEligible: false,
       });
       await founder.save(); // pre-save hook will hash the password
       console.log('Founder "Shubham Nigam" created successfully!');
