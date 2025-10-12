@@ -5,8 +5,10 @@ import {
   getSprintTasks,
   getTaskDetails,
   getUserTaskHistory,
-  getQuestHiveUsers
+  getQuestHiveUsers,
+  getUsersFromTasks
 } from '../services/questHiveService.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -79,8 +81,16 @@ router.get('/users/:userId/tasks', auth, async (req, res) => {
     }
     
     // If userId is 'me', get current user's mapped Quest Hive user ID
-    // For now, we'll get all tasks since we don't have the mapping set up yet
-    const questHiveUserId = userId === 'me' ? null : userId;
+    let questHiveUserId = null;
+    
+    if (userId === 'me') {
+      // Get current user's Quest Hive mapping
+      questHiveUserId = req.user.questHiveUserId;
+    } else if (req.user.role === 'founder') {
+      // Founders can access any user's tasks
+      questHiveUserId = userId;
+    }
+    
     const taskHistory = await getUserTaskHistory(questHiveUserId);
     
     res.json({
@@ -99,11 +109,43 @@ router.get('/users/:userId/tasks', auth, async (req, res) => {
 // Get all Quest Hive users (founder only)
 router.get('/users', auth, isFounder, async (req, res) => {
   try {
-    const users = await getQuestHiveUsers();
+    let questHiveUsers;
+    
+    try {
+      // Try to get users from Quest Hive API
+      questHiveUsers = await getQuestHiveUsers();
+    } catch (apiError) {
+      console.warn('Failed to get users from Quest Hive API, trying task history method:', apiError.message);
+      // Fallback to getting users from task history
+      const usersFromTasks = await getUsersFromTasks();
+      questHiveUsers = {
+        success: true,
+        data: usersFromTasks.map(user => ({
+          userId: user.questHiveUserId,
+          name: user.name,
+          email: user.email,
+          role: 'MEMBER',
+          companyRole: 'EMPLOYEE',
+          entityId: process.env.QUEST_HIVE_ENTITY_ID,
+          team: ['Development']
+        }))
+      };
+    }
+    
+    // Get existing internal users to show mapping status
+    const internalUsers = await User.find({ questHiveUserId: { $ne: null } });
+    const mappedUserIds = new Set(internalUsers.map(user => user.questHiveUserId));
+    
+    // Add mapping status to Quest Hive users
+    const usersWithMappingStatus = questHiveUsers.data.map(qhUser => ({
+      ...qhUser,
+      isMapped: mappedUserIds.has(qhUser.userId),
+      internalUser: internalUsers.find(user => user.questHiveUserId === qhUser.userId)
+    }));
     
     res.json({
       success: true,
-      data: users
+      data: usersWithMappingStatus
     });
   } catch (error) {
     console.error('Error in /users:', error);
@@ -120,7 +162,14 @@ router.get('/task-history', auth, async (req, res) => {
     const { userId, sprintId, limit = 50, offset = 0 } = req.query;
     
     // If user is not founder, they can only see their own tasks
-    const targetUserId = req.user.role === 'founder' ? userId : null;
+    let targetUserId = null;
+    
+    if (req.user.role === 'founder') {
+      targetUserId = userId;
+    } else {
+      // For employees, use their mapped Quest Hive user ID
+      targetUserId = req.user.questHiveUserId;
+    }
     
     const taskHistory = await getUserTaskHistory(targetUserId);
     

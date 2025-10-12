@@ -62,7 +62,18 @@ const userSchema = new mongoose.Schema({
   questHiveUserId: {
     type: String,
     default: null,
-    sparse: true // Allows multiple null values
+    sparse: true, // Allows multiple null values
+    index: true // Add index for faster lookups
+  },
+  questHiveData: {
+    entityId: String,
+    companyRole: String,
+    team: [String],
+    avatar: String,
+    lastSynced: {
+      type: Date,
+      default: Date.now
+    }
   }
 }, {
   timestamps: true
@@ -84,6 +95,32 @@ userSchema.pre('save', async function(next) {
 // Compare password method
 userSchema.methods.comparePassword = async function(password) {
   return bcrypt.compare(password, this.password);
+};
+
+// Method to sync with Quest Hive data
+userSchema.methods.syncWithQuestHive = function(questHiveUser) {
+  this.questHiveData = {
+    entityId: questHiveUser.entityId,
+    companyRole: questHiveUser.companyRole || questHiveUser.role,
+    team: questHiveUser.team || [],
+    avatar: questHiveUser.avatar || '',
+    lastSynced: new Date()
+  };
+  
+  // Update avatar if Quest Hive has one and we don't
+  if (questHiveUser.avatar && !this.avatar) {
+    this.avatar = questHiveUser.avatar;
+  }
+};
+
+// Static method to find user by Quest Hive ID
+userSchema.statics.findByQuestHiveId = function(questHiveUserId) {
+  return this.findOne({ questHiveUserId });
+};
+
+// Static method to get users with Quest Hive mapping
+userSchema.statics.findMappedUsers = function() {
+  return this.find({ questHiveUserId: { $ne: null } });
 };
 
 export default mongoose.model('User', userSchema);

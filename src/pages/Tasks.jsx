@@ -6,10 +6,10 @@ import api from '@/api/axiosConfig.js';
 import { useAuth } from '@/contexts/AuthContext';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiPlus, FiEdit3, FiTrash2, FiClock, FiCheckCircle, FiAlertCircle, FiPlay, FiMessageSquare, FiFilter, FiUsers, FiCalendar, FiRefreshCw } = FiIcons;
+const { FiPlus, FiEdit3, FiTrash2, FiClock, FiCheckCircle, FiAlertCircle, FiPlay, FiMessageSquare, FiFilter, FiUsers, FiCalendar, FiRefreshCw, FiExternalLink } = FiIcons;
 
 const Tasks = () => {
-  const { isFounder } = useAuth();
+  const { user, isFounder } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [questHiveTasks, setQuestHiveTasks] = useState([]);
   const [questHiveUsers, setQuestHiveUsers] = useState([]);
@@ -206,6 +206,11 @@ const Tasks = () => {
     return 'todo';
   };
 
+  const getQuestHiveUserName = (userId) => {
+    const qhUser = questHiveUsers.find(user => user.userId === userId);
+    return qhUser ? qhUser.name : `User ${userId?.substring(0, 8)}`;
+  };
+
   const statusOptions = [
     { value: 'todo', label: 'To Do' },
     { value: 'in-progress', label: 'In Progress' },
@@ -283,7 +288,35 @@ const Tasks = () => {
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
             }`}
           >
+            <SafeIcon icon={FiExternalLink} className="w-4 h-4 mr-2" />
             Quest Hive Tasks
+          </button>
+        </div>
+      )}
+
+      {/* Show Quest Hive tab for employees if they have questHiveUserId */}
+      {!isFounder && user?.questHiveUserId && (
+        <div className="flex space-x-2 mb-8 p-1 bg-gray-900 rounded-xl border border-gray-800">
+          <button
+            onClick={() => setActiveTab('internal')}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === 'internal'
+                ? 'bg-white text-black shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            }`}
+          >
+            Internal Tasks
+          </button>
+          <button
+            onClick={() => setActiveTab('quest-hive')}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === 'quest-hive'
+                ? 'bg-white text-black shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            }`}
+          >
+            <SafeIcon icon={FiExternalLink} className="w-4 h-4 mr-2" />
+            My Quest Hive Tasks
           </button>
         </div>
       )}
@@ -306,8 +339,8 @@ const Tasks = () => {
               >
                 <option value="">All Users</option>
                 {questHiveUsers.map((user) => (
-                  <option key={user.questHiveUserId} value={user.questHiveUserId}>
-                    {user.email || user.questHiveUserId}
+                  <option key={user.userId || user.questHiveUserId} value={user.userId || user.questHiveUserId}>
+                    {user.name} ({user.email})
                   </option>
                 ))}
               </select>
@@ -383,11 +416,21 @@ const Tasks = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all flex flex-col justify-between"
+              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-all flex flex-col justify-between relative"
             >
+              {/* Quest Hive Badge */}
+              {isQuestHiveTab && (
+                <div className="absolute top-4 right-4">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                    <SafeIcon icon={FiExternalLink} className="w-3 h-3 mr-1" />
+                    Quest Hive
+                  </span>
+                </div>
+              )}
+
               <div>
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+                  <div className="flex-1 pr-4">
                     <h3 className="font-semibold text-white mb-2">
                       {task.title || task.name || 'Untitled Task'}
                     </h3>
@@ -428,7 +471,7 @@ const Tasks = () => {
                     {task.userId && (
                       <div className="flex items-center text-xs text-gray-500">
                         <SafeIcon icon={FiUsers} className="w-3 h-3 mr-1" />
-                        User ID: {task.userId}
+                        Assigned: {getQuestHiveUserName(task.userId)}
                       </div>
                     )}
                   </div>
@@ -478,7 +521,7 @@ const Tasks = () => {
                 />
                 <span className="text-xs text-gray-500">
                   {!isQuestHiveTab && isFounder ? `${task.userId?.name} - ` : ''}
-                  {isQuestHiveTab ? 'Quest Hive Task' : `Created ${new Date(task.createdAt).toLocaleDateString()}`}
+                  {isQuestHiveTab ? 'External Task' : `Created ${new Date(task.createdAt).toLocaleDateString()}`}
                 </span>
               </div>
             </motion.div>
@@ -492,7 +535,9 @@ const Tasks = () => {
           </p>
           <p className="text-gray-600 text-sm mb-6">
             {isQuestHiveTab 
-              ? 'Try adjusting your filters or check Quest Hive directly.'
+              ? user?.questHiveUserId 
+                ? 'No tasks found for your Quest Hive account. Try adjusting filters or check Quest Hive directly.'
+                : 'Your account is not linked to Quest Hive. Contact your administrator to link your account.'
               : 'Create your first task to start tracking your progress!'
             }
           </p>

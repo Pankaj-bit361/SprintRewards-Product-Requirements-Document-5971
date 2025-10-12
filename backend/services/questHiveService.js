@@ -63,7 +63,7 @@ export const getTaskDetails = async (taskId) => {
 };
 
 // Get user's task history across all sprints
-export const getUserTaskHistory = async (userId) => {
+export const getUserTaskHistory = async (questHiveUserId = null) => {
   try {
     // First get all sprints
     const sprintsData = await getAllSprints();
@@ -76,9 +76,9 @@ export const getUserTaskHistory = async (userId) => {
       try {
         const sprintTasks = await getSprintTasks(sprint.sprintId);
         if (sprintTasks.data && sprintTasks.data.length > 0) {
-          // Filter tasks by user if userId is provided
-          const userTasks = userId ? 
-            sprintTasks.data.filter(task => task.userId === userId) : 
+          // Filter tasks by user if questHiveUserId is provided
+          const userTasks = questHiveUserId ? 
+            sprintTasks.data.filter(task => task.userId === questHiveUserId) : 
             sprintTasks.data;
           
           // Add sprint info to each task
@@ -110,20 +110,52 @@ export const getUserTaskHistory = async (userId) => {
   }
 };
 
-// Map Quest Hive user ID to our internal user email
-export const mapQuestHiveUserToEmail = (questHiveUserId) => {
-  // This mapping should be stored in your database or config
-  // For now, using a simple mapping
-  const userMapping = {
-    'u-c035bbec-95ea-4361-bdaa-fe5349c5ccde': 'founder@example.com',
-    // Add more mappings as needed
-  };
-  
-  return userMapping[questHiveUserId] || null;
+// Get all Quest Hive users from the entity
+export const getQuestHiveUsers = async () => {
+  try {
+    // This endpoint should return all users in the entity
+    const response = await questHiveAPI.get(`/entities/${questHiveConfig.entityId}/users`);
+    
+    if (response.data && response.data.success) {
+      return {
+        success: true,
+        data: response.data.data || []
+      };
+    }
+    
+    // Fallback: try to get users from task history
+    const taskHistory = await getUserTaskHistory();
+    const uniqueUserIds = new Set();
+    
+    taskHistory.data.forEach(task => {
+      if (task.userId) {
+        uniqueUserIds.add(task.userId);
+      }
+    });
+    
+    // Create mock user data from unique user IDs
+    const users = Array.from(uniqueUserIds).map(userId => ({
+      userId: userId,
+      name: `User ${userId.substring(0, 8)}`,
+      email: `${userId}@questlabs.biz`,
+      role: 'MEMBER',
+      companyRole: 'EMPLOYEE',
+      entityId: questHiveConfig.entityId,
+      team: ['Development']
+    }));
+    
+    return {
+      success: true,
+      data: users
+    };
+  } catch (error) {
+    console.error('Error fetching Quest Hive users:', error.message);
+    throw new Error('Failed to fetch Quest Hive users');
+  }
 };
 
-// Get all unique users from Quest Hive tasks
-export const getQuestHiveUsers = async () => {
+// Get unique users from task data (alternative method)
+export const getUsersFromTasks = async () => {
   try {
     const taskHistory = await getUserTaskHistory();
     const users = new Set();
@@ -136,10 +168,11 @@ export const getQuestHiveUsers = async () => {
     
     return Array.from(users).map(userId => ({
       questHiveUserId: userId,
-      email: mapQuestHiveUserToEmail(userId)
+      email: `${userId}@questlabs.biz`, // Generate email from userId
+      name: `User ${userId.substring(0, 8)}` // Generate name from userId
     }));
   } catch (error) {
-    console.error('Error fetching Quest Hive users:', error.message);
+    console.error('Error fetching Quest Hive users from tasks:', error.message);
     throw error;
   }
 };
