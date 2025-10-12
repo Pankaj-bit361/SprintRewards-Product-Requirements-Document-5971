@@ -55,6 +55,7 @@ const Tasks = () => {
         setSprints(sprintsResponse.data.data?.data?.sprints || []);
       }
 
+
       if (usersResponse.data.success) {
         setQuestHiveUsers(usersResponse.data.data || []);
       }
@@ -97,16 +98,16 @@ const Tasks = () => {
   const fetchTasksForSprint = async (sprintId) => {
     try {
       const response = await api.get(`/quest-hive/sprints/${sprintId}/tasks`);
+
       
       if (response.data.success) {
         let tasks = response.data.data || [];
         
-        // Filter tasks by user if not founder
         if (!isFounder && user?.questHiveUserId) {
-          tasks = tasks.filter(task => task.userId === user.questHiveUserId);
+          tasks = tasks.filter(task => task.assignee.includes(user.questHiveUserId));
         }
+
         
-        // Apply search filter if specified
         if (filters.search) {
           tasks = tasks.filter(task =>
             task.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -158,15 +159,14 @@ const Tasks = () => {
 
   const getStatusIcon = (task) => {
     if (task.completed || task.status === 'completed') return FiCheckCircle;
-    if (task.inProgress || task.status === 'in-progress') return FiPlay;
+    if (task.inProgress || task.status === 'IN_PROGRESS') return FiPlay;
     if (task.blocked || task.status === 'blocked') return FiAlertCircle;
     return FiClock;
   };
 
   const formatQuestHiveTaskStatus = (task) => {
-    if (task.completed || task.status === 'completed') return 'Completed';
-    if (task.inProgress || task.status === 'in-progress') return 'In Progress';
-    if (task.blocked || task.status === 'blocked') return 'Blocked';
+    if (task.completed || task.status === 'CLOSED') return 'Completed';
+    if (task.inProgress || task.status === 'IN_PROGRESS') return 'In Progress';
     return 'To Do';
   };
 
