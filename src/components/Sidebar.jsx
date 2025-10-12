@@ -50,7 +50,7 @@ const Sidebar = () => {
       <motion.div
         initial={{ x: -300 }}
         animate={{ x: 0 }}
-        className={`fixed left-0 top-0 h-full bg-gray-900 border-r border-gray-800 z-50 transition-all duration-300 ${
+        className={`fixed left-0 top-0 h-full bg-gray-900 border-r border-gray-800 z-50 transition-all duration-300 flex flex-col ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
@@ -72,7 +72,7 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation - Takes up remaining space */}
         <nav className="flex-1 px-4 py-6">
           <div className="space-y-2">
             {navItems.map((item) => (
@@ -97,7 +97,7 @@ const Sidebar = () => {
           </div>
         </nav>
 
-        {/* User Section */}
+        {/* User Section - Fixed at bottom */}
         <div className="border-t border-gray-800 p-4">
           {!isCollapsed ? (
             <div className="space-y-4">
