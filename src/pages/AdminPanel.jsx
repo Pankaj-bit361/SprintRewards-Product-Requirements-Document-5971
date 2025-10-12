@@ -18,7 +18,10 @@ const {
   FiX,
   FiRefreshCw,
   FiLink,
-  FiExternalLink
+  FiExternalLink,
+  FiBarChart,
+  FiActivity,
+  FiTarget
 } = FiIcons;
 
 const AdminPanel = () => {
@@ -138,10 +141,12 @@ const AdminPanel = () => {
   }
 
   const pendingTransactions = transactions.filter(t => t.status === 'pending');
+  const approvedTransactions = transactions.filter(t => t.status === 'approved');
   const totalEmployees = employees.filter(e => e.role === 'employee').length;
   const eligibleEmployees = employees.filter(e => e.role === 'employee' && e.isEligible).length;
   const totalPointsInCirculation = employees.reduce((sum, e) => sum + e.rewardPoints, 0);
   const questHiveMappedEmployees = employees.filter(e => e.questHiveUserId).length;
+  const totalPointsTransferred = approvedTransactions.reduce((sum, t) => sum + t.points, 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -431,45 +436,206 @@ const AdminPanel = () => {
           className="bg-gray-900 border border-gray-800 rounded-xl"
         >
           <div className="p-6 border-b border-gray-800">
-            <h2 className="text-lg font-semibold text-white">Recent Transactions</h2>
+            <h2 className="text-lg font-semibold text-white">All Transactions</h2>
+            <p className="text-sm text-gray-400 mt-1">Complete transaction history across all employees</p>
           </div>
           <div className="p-6">
-            {transactions.filter(t => t.status === 'approved').length > 0 ? (
+            {transactions.length > 0 ? (
               <div className="space-y-4">
-                {transactions
-                  .filter(t => t.status === 'approved')
-                  .slice(0, 10)
-                  .map((transaction, index) => (
-                    <motion.div
-                      key={transaction._id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                          <SafeIcon icon={FiGift} className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            {transaction.fromUserId.name} → {transaction.toUserId.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(transaction.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
+                {transactions.slice(0, 20).map((transaction, index) => (
+                  <motion.div
+                    key={transaction._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center justify-between p-4 bg-gray-800 rounded-lg border border-gray-700"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        transaction.status === 'pending' ? 'bg-yellow-500/20' :
+                        transaction.status === 'approved' ? 'bg-green-500/20' : 'bg-red-500/20'
+                      }`}>
+                        <SafeIcon 
+                          icon={
+                            transaction.status === 'pending' ? FiClock :
+                            transaction.status === 'approved' ? FiCheck : FiX
+                          } 
+                          className={`w-5 h-5 ${
+                            transaction.status === 'pending' ? 'text-yellow-400' :
+                            transaction.status === 'approved' ? 'text-green-400' : 'text-red-400'
+                          }`} 
+                        />
                       </div>
-                      <span className="text-sm font-bold text-white">{transaction.points} pts</span>
-                    </motion.div>
-                  ))}
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {transaction.fromUserId.name} → {transaction.toUserId.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                        {transaction.message && (
+                          <p className="text-xs text-gray-500 italic mt-1">"{transaction.message}"</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-white">{transaction.points} pts</span>
+                      <div className={`text-xs font-medium mt-1 ${
+                        transaction.status === 'pending' ? 'text-yellow-400' :
+                        transaction.status === 'approved' ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {transaction.status.toUpperCase()}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+                {transactions.length > 20 && (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500 text-sm">Showing 20 of {transactions.length} transactions</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8">
                 <SafeIcon icon={FiTrendingUp} className="w-12 h-12 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-500">No transactions yet</p>
+                <p className="text-gray-600 text-sm">Transaction history will appear here once employees start sending points.</p>
               </div>
             )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-6"
+        >
+          {/* System Analytics */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <SafeIcon icon={FiBarChart} className="w-6 h-6 text-white" />
+              <h2 className="text-lg font-semibold text-white">System Analytics</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Total Points Transferred</span>
+                  <SafeIcon icon={FiActivity} className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">{totalPointsTransferred}</div>
+                <div className="text-xs text-gray-500 mt-1">Across all transactions</div>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Average Points per Transaction</span>
+                  <SafeIcon icon={FiTarget} className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {approvedTransactions.length > 0 ? Math.round(totalPointsTransferred / approvedTransactions.length) : 0}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Based on approved transactions</div>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Engagement Rate</span>
+                  <SafeIcon icon={FiUsers} className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {totalEmployees > 0 ? Math.round((eligibleEmployees / totalEmployees) * 100) : 0}%
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Eligible employees this sprint</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Transaction Status Breakdown */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Transaction Status Breakdown</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <SafeIcon icon={FiCheck} className="w-5 h-5 text-green-400" />
+                  <span className="text-green-400 font-medium">Approved</span>
+                </div>
+                <div className="text-2xl font-bold text-white">{approvedTransactions.length}</div>
+                <div className="text-sm text-gray-400">
+                  {totalPointsTransferred} points transferred
+                </div>
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <SafeIcon icon={FiClock} className="w-5 h-5 text-yellow-400" />
+                  <span className="text-yellow-400 font-medium">Pending</span>
+                </div>
+                <div className="text-2xl font-bold text-white">{pendingTransactions.length}</div>
+                <div className="text-sm text-gray-400">
+                  {pendingTransactions.reduce((sum, t) => sum + t.points, 0)} points pending
+                </div>
+              </div>
+
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <SafeIcon icon={FiX} className="w-5 h-5 text-red-400" />
+                  <span className="text-red-400 font-medium">Rejected</span>
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {transactions.filter(t => t.status === 'rejected').length}
+                </div>
+                <div className="text-sm text-gray-400">
+                  {transactions.filter(t => t.status === 'rejected').reduce((sum, t) => sum + t.points, 0)} points rejected
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Employee Performance Overview */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Employee Performance Overview</h3>
+            <div className="space-y-4">
+              {employees.filter(e => e.role === 'employee').slice(0, 5).map((employee, index) => (
+                <div key={employee._id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                      {employee.avatar ? (
+                        <img src={employee.avatar} alt={employee.name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <span className="text-white font-medium text-sm">{employee.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{employee.name}</p>
+                      <p className="text-xs text-gray-400">Sprint Points: {employee.sprintPoints}/12</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-white">{employee.rewardPoints} points</div>
+                    <div className={`text-xs ${employee.isEligible ? 'text-green-400' : 'text-gray-400'}`}>
+                      {employee.isEligible ? 'Eligible' : 'Not Eligible'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {employees.filter(e => e.role === 'employee').length === 0 && (
+                <div className="text-center py-8">
+                  <SafeIcon icon={FiUsers} className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500">No employee data available</p>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
       )}
