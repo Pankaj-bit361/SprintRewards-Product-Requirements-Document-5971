@@ -25,88 +25,60 @@ export const sendOTPEmail = async (email, otp, userName = 'User') => {
     const year = new Date().getFullYear();
     const brandName = process.env.BRAND_NAME || 'Bravo Rewards';
     const accent = process.env.BRAND_ACCENT_HEX || '#22c55e';
-    
-    // Create OTP digits as table cells for better email client compatibility
-    const otpCells = otp.split('').map(d => `<td style="padding:8px 4px;"><div style="width:48px;height:56px;line-height:56px;text-align:center;background:#111827;border:1px solid #1f2937;border-radius:8px;font-size:24px;font-weight:800;color:#ffffff;">${d}</div></td>`).join('');
-    
+    const otpDigits = otp.split('').map(d => `<td style="width:48px;height:48px;text-align:center;vertical-align:middle;background:#1f2937;font-size:24px;font-weight:900;color:#ffffff;padding:0;margin:0 4px;border-radius:6px">${d}</td>`).join('');
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${brandName} - Sign-In Code</title>
-<style type="text/css">
-  body { margin: 0; padding: 0; background-color: #0b1220; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e5e7eb; }
-  table { border-collapse: collapse; width: 100%; }
-  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-  .card { background: #0f172a; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
-  .header { background: #0b1220; padding: 24px; border-bottom: 1px solid #1f2937; }
-  .brand { font-weight: 700; font-size: 18px; color: #ffffff; display: block; margin-bottom: 8px; }
-  .accent-line { height: 3px; width: 50px; background: ${accent}; border-radius: 2px; margin-top: 8px; }
-  .content { padding: 24px; }
-  .h1 { margin: 0 0 12px 0; font-size: 20px; color: #ffffff; font-weight: 700; }
-  .text { color: #9ca3af; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0; }
-  .button { display: inline-block; background: ${accent}; color: #04150f; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 8px; margin-top: 16px; font-size: 14px; }
-  .button:hover { opacity: 0.9; }
-  .warn { background: #111827; border: 1px solid #1f2937; border-left: 3px solid #f59e0b; color: #e5e7eb; border-radius: 8px; padding: 12px 14px; margin-top: 16px; font-size: 13px; }
-  .footer { padding: 16px 24px; background: #0b1220; border-top: 1px solid #1f2937; color: #6b7280; font-size: 12px; text-align: center; }
-  .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; }
-  @media only screen and (max-width: 480px) {
-    .container { padding: 12px !important; }
-    .content { padding: 16px !important; }
-    .header { padding: 16px !important; }
-    .h1 { font-size: 18px; }
-    td { padding: 4px 2px !important; }
-    div[style*="width:48px"] { width: 40px !important; height: 48px !important; line-height: 48px !important; font-size: 20px !important; }
-  }
-</style>
+<title>${brandName} • Sign-In Code</title>
 </head>
-<body style="margin:0; padding:0; background-color:#0b1220;">
-  <div class="preheader">Your one-time sign-in code for ${brandName}: ${otp}. Expires in 10 minutes.</div>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0b1220;">
+<body style="margin:0;padding:0;background-color:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';color:#374151;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;margin:0;padding:0;">
     <tr>
-      <td align="center" style="padding:20px 0;">
-        <table class="container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;">
+      <td align="center" style="padding:32px 0;background-color:#f9fafb;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
           <tr>
-            <td>
-              <table width="100%" cellpadding="0" cellspacing="0" class="card">
+            <td style="background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;">
+              <div style="font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827;margin-bottom:10px">${brandName}</div>
+              <div style="height:3px;width:56px;background:${accent};border-radius:2px;"></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;background-color:#ffffff;">
+              <p style="margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700">Your secure sign-in code</p>
+              <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 16px 0">Hi ${userName}, use the code below to complete your sign-in. This code expires in 10 minutes.</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0;">
                 <tr>
-                  <td class="header" style="background:#0b1220; padding:24px; border-bottom:1px solid #1f2937;">
-                    <span class="brand" style="font-weight:700; font-size:18px; color:#ffffff; display:block; margin-bottom:8px;">${brandName}</span>
-                    <div class="accent-line" style="height:3px; width:50px; background:${accent}; border-radius:2px; margin-top:8px;"></div>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="content" style="padding:24px;">
-                    <p class="h1" style="margin:0 0 12px 0; font-size:20px; color:#ffffff; font-weight:700;">Your secure sign-in code</p>
-                    <p class="text" style="color:#9ca3af; font-size:14px; line-height:1.6; margin:0 0 16px 0;">Hi ${userName}, use the code below to complete your sign-in. This code expires in 10 minutes.</p>
-                    <div style="text-align:center; margin:24px 0;">
-                      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 auto;">
-                        <tr style="text-align:center;">
-                          ${otpCells}
-                        </tr>
-                      </table>
-                    </div>
-                    <table width="100%" cellpadding="0" cellspacing="0">
+                  <td align="center">
+                    <table cellpadding="0" cellspacing="6">
                       <tr>
-                        <td align="center" style="padding:16px 0;">
-                          <a href="${loginUrl}" class="button" style="display:inline-block; background:${accent}; color:#04150f; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px; font-size:14px;">Open ${brandName}</a>
-                        </td>
+                        ${otpDigits}
                       </tr>
                     </table>
-                    <div class="warn" style="background:#111827; border:1px solid #1f2937; border-left:3px solid #f59e0b; color:#e5e7eb; border-radius:8px; padding:12px 14px; margin-top:16px; font-size:13px;">
-                      <strong>Security tip:</strong> Never share this code. ${brandName} support will never ask for it.
-                    </div>
-                    <p class="text" style="color:#9ca3af; font-size:14px; line-height:1.6; margin:16px 0 0 0;">If you didn't request this, you can safely ignore this email.</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="footer" style="padding:16px 24px; background:#0b1220; border-top:1px solid #1f2937; color:#6b7280; font-size:12px; text-align:center;">
-                    Copyright ${year} ${brandName}. All rights reserved.
                   </td>
                 </tr>
               </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">
+                <tr>
+                  <td align="center" style="padding:10px 0;">
+                    <p style="margin:0;font-size:13px;color:#6b7280;font-weight:600;letter-spacing:2px;font-family:monospace;background:#f3f4f6;padding:12px 16px;border-radius:8px;border:1px solid #e5e7eb">${otp}</p>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:10px 0;">
+                    <a href="${loginUrl}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;">Open ${brandName}</a>
+                  </td>
+                </tr>
+              </table>
+              <div style="background:#fef3c7;border:1px solid #fcd34d;border-left:3px solid #f59e0b;color:#92400e;border-radius:10px;padding:12px 14px;margin-top:18px;font-size:13px"><strong>Security tip:</strong> Never share this code. ${brandName} support will never ask for it.</div>
+              <p style="color:#6b7280;font-size:14px;line-height:1.6;margin-top:16px">If you didn't request this, you can safely ignore this email.</p>
             </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 28px;background-color:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center">© ${year} ${brandName}. All rights reserved.</td>
           </tr>
         </table>
       </td>
@@ -114,7 +86,8 @@ export const sendOTPEmail = async (email, otp, userName = 'User') => {
   </table>
 </body>
 </html>`;
-    const textContent = `${brandName} - Your sign-in code\n\nHi ${userName},\nYour one-time sign-in code is: ${otp}\nIt expires in 10 minutes.\n\nOpen ${brandName}: ${loginUrl}\n\nIf you didn't request this code, you can ignore this email.\n\nCopyright ${year} ${brandName}`;
+    const textContent = `${brandName} - Your sign-in code\n\nHi ${userName},\nYour one-time sign-in code is: ${otp}\nIt expires in 10 minutes.\n\nOpen ${brandName}: ${loginUrl}\n\nIf you didn't request this code, you can ignore this email.\n\n© ${year} ${brandName}`;
+
 
     const command = new SendEmailCommand({
       Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@bravorewards.com',
@@ -140,7 +113,7 @@ export const sendOTPEmail = async (email, otp, userName = 'User') => {
 // Send Welcome Email
 export const sendWelcomeEmail = async (email, userName = 'User') => {
   try {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const year = new Date().getFullYear();
     const brandName = process.env.BRAND_NAME || 'Bravo Rewards';
     const accent = process.env.BRAND_ACCENT_HEX || '#22c55e';
@@ -150,84 +123,58 @@ export const sendWelcomeEmail = async (email, userName = 'User') => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to ${brandName}</title>
-<style type="text/css">
-  body { margin: 0; padding: 0; background-color: #0b1220; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e5e7eb; }
-  table { border-collapse: collapse; width: 100%; }
-  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-  .card { background: #0f172a; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
-  .header { background: #0b1220; padding: 24px; border-bottom: 1px solid #1f2937; }
-  .brand { font-weight: 700; font-size: 18px; color: #ffffff; display: block; margin-bottom: 8px; }
-  .accent-line { height: 3px; width: 50px; background: ${accent}; border-radius: 2px; margin-top: 8px; }
-  .content { padding: 24px; }
-  .h1 { margin: 0 0 12px 0; font-size: 20px; color: #ffffff; font-weight: 700; }
-  .text { color: #9ca3af; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0; }
-  .button { display: inline-block; background: ${accent}; color: #04150f; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 8px; margin-top: 16px; font-size: 14px; }
-  .button:hover { opacity: 0.9; }
-  .footer { padding: 16px 24px; background: #0b1220; border-top: 1px solid #1f2937; color: #6b7280; font-size: 12px; text-align: center; }
-  .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; }
-  @media only screen and (max-width: 480px) {
-    .container { padding: 12px !important; }
-    .content { padding: 16px !important; }
-    .header { padding: 16px !important; }
-    .h1 { font-size: 18px; }
-  }
+<style>
+  body{margin:0;background-color:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';color:#374151;}
+  .container{max-width:600px;margin:0 auto;padding:32px;}
+  .card{background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+  .header{background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;}
+  .brand{display:inline-block;font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827}
+  .accent{display:block;height:3px;width:56px;background:${accent};border-radius:2px;margin-top:10px}
+  .content{padding:28px;background:#ffffff}
+  .h1{margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700}
+  .muted{color:#6b7280;font-size:14px;line-height:1.6}
+  .list{margin:14px 0 0 0;padding:0}
+  .list li{margin:8px 0 0 0}
+  .button{display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;margin-top:14px}
+  .footer{padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center}
+  .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+  @media only screen and (max-width:480px){.container{padding:16px!important}.content{padding:20px!important}.header{padding:20px!important}}
 </style>
 </head>
-<body style="margin:0; padding:0; background-color:#0b1220;">
-  <div class="preheader">Welcome to ${brandName} - your account is ready.</div>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0b1220;">
-    <tr>
-      <td align="center" style="padding:20px 0;">
-        <table class="container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;">
-          <tr>
-            <td>
-              <table width="100%" cellpadding="0" cellspacing="0" class="card">
-                <tr>
-                  <td class="header" style="background:#0b1220; padding:24px; border-bottom:1px solid #1f2937;">
-                    <span class="brand" style="font-weight:700; font-size:18px; color:#ffffff; display:block; margin-bottom:8px;">${brandName}</span>
-                    <div class="accent-line" style="height:3px; width:50px; background:${accent}; border-radius:2px; margin-top:8px;"></div>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="content" style="padding:24px;">
-                    <p class="h1" style="margin:0 0 12px 0; font-size:20px; color:#ffffff; font-weight:700;">Welcome aboard, ${userName}!</p>
-                    <p class="text" style="color:#9ca3af; font-size:14px; line-height:1.6; margin:0 0 16px 0;">You're in. Your ${brandName} account is ready - here's how to make the most of it:</p>
-                    <div style="margin:16px 0;">
-                      <p style="color:#9ca3af; font-size:14px; line-height:1.8; margin:8px 0;">✓ Complete your profile to personalize your experience</p>
-                      <p style="color:#9ca3af; font-size:14px; line-height:1.8; margin:8px 0;">✓ Join a community or create your own</p>
-                      <p style="color:#9ca3af; font-size:14px; line-height:1.8; margin:8px 0;">✓ Start a sprint and begin earning premium rewards</p>
-                    </div>
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center" style="padding:16px 0;">
-                          <a href="${frontendUrl}" class="button" style="display:inline-block; background:${accent}; color:#04150f; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px; font-size:14px;">Launch Dashboard</a>
-                        </td>
-                      </tr>
-                    </table>
-                    <p class="text" style="color:#9ca3af; font-size:14px; line-height:1.6; margin:16px 0 0 0;">Need help? Reply to this email and our team will assist you.</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="footer" style="padding:16px 24px; background:#0b1220; border-top:1px solid #1f2937; color:#6b7280; font-size:12px; text-align:center;">
-                    Copyright ${year} ${brandName}. All rights reserved.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style="background-color:#f9fafb;margin:0;padding:0;">
+  <div class="preheader">Welcome to ${brandName} — your account is ready.</div>
+  <div class="container" style="max-width:600px;margin:0 auto;padding:32px;background-color:#f9fafb;">
+    <div class="card" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <div class="header" style="background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;">
+        <span class="brand" style="display:inline-block;font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827">${brandName}</span>
+        <span class="accent" style="display:block;height:3px;width:56px;background:${accent};border-radius:2px;margin-top:10px"></span>
+      </div>
+      <div class="content" style="padding:28px;background:#ffffff">
+        <p class="h1" style="margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700">Welcome aboard, ${userName}!</p>
+        <p class="muted">You're in. Your ${brandName} account is ready — here’s how to make the most of it:</p>
+        <ul class="list">
+          <li class="muted">Complete your profile to personalize your experience</li>
+          <li class="muted">Join a community or create your own</li>
+          <li class="muted">Start a sprint and begin earning premium rewards</li>
+        </ul>
+        <div style="margin-top:14px;text-align:center">
+          <a href="${frontendUrl}" class="button" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;margin-top:14px">Launch Dashboard</a>
+        </div>
+        <p class="muted" style="color:#6b7280;font-size:14px;line-height:1.6;margin-top:18px">Need help? Reply to this email and our team will assist you.</p>
+      </div>
+      <div class="footer" style="padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center">© ${year} ${brandName}. All rights reserved.</div>
+    </div>
+  </div>
 </body>
 </html>`;
-    const textContent = `Welcome to ${brandName}, ${userName}!\n\nYour account is ready.\n\nNext steps:\n- Complete your profile\n- Join a community or create your own\n- Start a sprint and earn rewards\n\nLaunch Dashboard: ${frontendUrl}\n\nCopyright ${year} ${brandName}`;
+    const textContent = `Welcome to ${brandName}, ${userName}!\n\nYour account is ready.\n\nNext steps:\n• Complete your profile\n• Join a community or create your own\n• Start a sprint and earn rewards\n\nLaunch Dashboard: ${frontendUrl}\n\n© ${year} ${brandName}`;
+
 
     const command = new SendEmailCommand({
       Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@bravorewards.com',
       Destination: { ToAddresses: [email] },
       Message: {
-        Subject: { Data: 'Welcome to Bravo Rewards - Let\'s get you started', Charset: 'UTF-8' },
+        Subject: { Data: 'Welcome to Bravo Rewards — Let’s get you started', Charset: 'UTF-8' },
         Body: {
           Text: { Data: textContent, Charset: 'UTF-8' },
           Html: { Data: htmlContent, Charset: 'UTF-8' }
@@ -258,83 +205,52 @@ export const sendInvitationEmail = async (email, communityName, inviterName, rol
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>You're invited to ${communityName}</title>
-<style type="text/css">
-  body { margin: 0; padding: 0; background-color: #0b1220; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e5e7eb; }
-  table { border-collapse: collapse; width: 100%; }
-  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-  .card { background: #0f172a; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
-  .header { background: #0b1220; padding: 24px; border-bottom: 1px solid #1f2937; }
-  .brand { font-weight: 700; font-size: 18px; color: #ffffff; display: block; margin-bottom: 8px; }
-  .accent-line { height: 3px; width: 50px; background: ${accent}; border-radius: 2px; margin-top: 8px; }
-  .content { padding: 24px; }
-  .h1 { margin: 0 0 12px 0; font-size: 20px; color: #ffffff; font-weight: 700; }
-  .text { color: #9ca3af; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0; }
-  .invite-box { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }
-  .invite-role { font-size: 18px; font-weight: 700; color: ${accent}; margin: 0 0 8px 0; }
-  .button { display: inline-block; background: ${accent}; color: #04150f; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 8px; margin-top: 16px; font-size: 14px; }
-  .button:hover { opacity: 0.9; }
-  .warn { background: #111827; border: 1px solid #1f2937; border-left: 3px solid #f59e0b; color: #e5e7eb; border-radius: 8px; padding: 12px 14px; margin-top: 16px; font-size: 13px; }
-  .footer { padding: 16px 24px; background: #0b1220; border-top: 1px solid #1f2937; color: #6b7280; font-size: 12px; text-align: center; }
-  .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; overflow: hidden; }
-  @media only screen and (max-width: 480px) {
-    .container { padding: 12px !important; }
-    .content { padding: 16px !important; }
-    .header { padding: 16px !important; }
-    .h1 { font-size: 18px; }
-  }
+<style>
+  body{margin:0;background-color:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';color:#374151;}
+  .container{max-width:600px;margin:0 auto;padding:32px;}
+  .card{background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+  .header{background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;}
+  .brand{display:inline-block;font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827}
+  .accent{display:block;height:3px;width:56px;background:${accent};border-radius:2px;margin-top:10px}
+  .content{padding:28px;background:#ffffff}
+  .h1{margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700}
+  .muted{color:#6b7280;font-size:14px;line-height:1.6}
+  .invite-box{background:#f0fdf4;border:1px solid #dcfce7;border-radius:12px;padding:20px;margin:20px 0;text-align:center}
+  .invite-role{font-size:18px;font-weight:700;color:${accent};margin:0 0 8px 0}
+  .button{display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;margin-top:14px}
+  .footer{padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center}
+  .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+  .warn{background:#fef3c7;border:1px solid #fcd34d;border-left:3px solid #f59e0b;color:#92400e;border-radius:10px;padding:12px 14px;margin-top:18px;font-size:13px}
+  @media only screen and (max-width:480px){.container{padding:16px!important}.content{padding:20px!important}.header{padding:20px!important}}
 </style>
 </head>
-<body style="margin:0; padding:0; background-color:#0b1220;">
+<body style="background-color:#f9fafb;margin:0;padding:0;">
   <div class="preheader">You've been invited to join ${communityName} on ${brandName}</div>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0b1220;">
-    <tr>
-      <td align="center" style="padding:20px 0;">
-        <table class="container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;">
-          <tr>
-            <td>
-              <table width="100%" cellpadding="0" cellspacing="0" class="card">
-                <tr>
-                  <td class="header" style="background:#0b1220; padding:24px; border-bottom:1px solid #1f2937;">
-                    <span class="brand" style="font-weight:700; font-size:18px; color:#ffffff; display:block; margin-bottom:8px;">${brandName}</span>
-                    <div class="accent-line" style="height:3px; width:50px; background:${accent}; border-radius:2px; margin-top:8px;"></div>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="content" style="padding:24px;">
-                    <p class="h1" style="margin:0 0 12px 0; font-size:20px; color:#ffffff; font-weight:700;">You're invited!</p>
-                    <p class="text" style="color:#9ca3af; font-size:14px; line-height:1.6; margin:0 0 16px 0;"><strong>${inviterName}</strong> has invited you to join <strong>${communityName}</strong> on ${brandName}.</p>
-                    <div class="invite-box" style="background:#111827; border:1px solid #1f2937; border-radius:12px; padding:20px; margin:20px 0; text-align:center;">
-                      <p class="invite-role" style="font-size:18px; font-weight:700; color:${accent}; margin:0 0 8px 0;">Invited as ${role.toUpperCase()}</p>
-                      <p style="color:#9ca3af; font-size:14px; line-height:1.6; margin:0;">Join the community and start earning reward points!</p>
-                    </div>
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center" style="padding:16px 0;">
-                          <a href="${inviteUrl}" class="button" style="display:inline-block; background:${accent}; color:#04150f; text-decoration:none; font-weight:700; padding:12px 24px; border-radius:8px; font-size:14px;">Accept Invitation</a>
-                        </td>
-                      </tr>
-                    </table>
-                    <div class="warn" style="background:#111827; border:1px solid #1f2937; border-left:3px solid #f59e0b; color:#e5e7eb; border-radius:8px; padding:12px 14px; margin-top:16px; font-size:13px;">
-                      This invitation will expire in 7 days. If you don't have an account yet, you'll be able to create one when you accept.
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="footer" style="padding:16px 24px; background:#0b1220; border-top:1px solid #1f2937; color:#6b7280; font-size:12px; text-align:center;">
-                    Copyright ${year} ${brandName}. All rights reserved.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+  <div class="container" style="max-width:600px;margin:0 auto;padding:32px;background-color:#f9fafb;">
+    <div class="card" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <div class="header" style="background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;">
+        <span class="brand" style="display:inline-block;font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827">${brandName}</span>
+        <span class="accent" style="display:block;height:3px;width:56px;background:${accent};border-radius:2px;margin-top:10px"></span>
+      </div>
+      <div class="content" style="padding:28px;background:#ffffff">
+        <p class="h1" style="margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700">You're invited!</p>
+        <p class="muted"><strong>${inviterName}</strong> has invited you to join <strong>${communityName}</strong> on ${brandName}.</p>
+        <div class="invite-box" style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
+          <p class="invite-role" style="font-size:18px;font-weight:700;color:${accent};margin:0 0 8px 0">Invited as ${role.toUpperCase()}</p>
+          <p class="muted" style="margin:0;color:#6b7280;font-size:14px;line-height:1.6">Join the community and start earning reward points!</p>
+        </div>
+        <div style="text-align:center">
+          <a href="${inviteUrl}" class="button" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;margin-top:14px">Accept Invitation</a>
+        </div>
+        <div class="warn" style="background:#fef3c7;border:1px solid #fcd34d;border-left:3px solid #f59e0b;color:#92400e;border-radius:10px;padding:12px 14px;margin-top:18px;font-size:13px">This invitation will expire in 7 days. If you don't have an account yet, you'll be able to create one when you accept.</div>
+      </div>
+      <div class="footer" style="padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center">© ${year} ${brandName}. All rights reserved.</div>
+    </div>
+  </div>
 </body>
 </html>`;
 
-    const textContent = `You're invited to join ${communityName}!\n\n${inviterName} has invited you to join ${communityName} on ${brandName} as ${role}.\n\nAccept invitation: ${inviteUrl}\n\nThis invitation will expire in 7 days.\n\nCopyright ${year} ${brandName}`;
+    const textContent = `You're invited to join ${communityName}!\n\n${inviterName} has invited you to join ${communityName} on ${brandName} as ${role}.\n\nAccept invitation: ${inviteUrl}\n\nThis invitation will expire in 7 days.\n\n© ${year} ${brandName}`;
 
     const command = new SendEmailCommand({
       Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@bravorewards.com',
@@ -356,4 +272,3 @@ export const sendInvitationEmail = async (email, communityName, inviterName, rol
     throw error;
   }
 };
-

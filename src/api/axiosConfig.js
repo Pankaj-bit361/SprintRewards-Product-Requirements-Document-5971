@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const baseURL = import.meta.env.PROD
   ? 'https://sprint-rewards-product-requirements.vercel.app/api'
-  : 'https://sprint-rewards-product-requirements.vercel.app/api';
+  : 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: baseURL,
