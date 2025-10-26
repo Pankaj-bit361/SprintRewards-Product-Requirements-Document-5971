@@ -22,9 +22,9 @@ return (
  {/* Logo */}
  <Link to="/" className="flex items-center space-x-2">
  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
- <span className="text-black font-bold text-sm">SR</span>
+ <span className="text-black font-bold text-sm">BR</span>
  </div>
- <span className="font-bold text-xl text-white">SprintRewards</span>
+ <span className="font-bold text-xl text-white">Bravo Rewards</span>
  </Link>
  {/* Desktop Navigation */}
  <div className="hidden md:flex items-center space-x-8">

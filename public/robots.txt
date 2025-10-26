@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /otp-verification
+Disallow: /admin
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /*.js$
+Disallow: /*.css$
+
+# Specific rules for search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Crawl delay
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://bravo-rewards.vercel.app/sitemap.xml
+
