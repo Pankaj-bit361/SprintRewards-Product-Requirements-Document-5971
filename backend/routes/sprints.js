@@ -13,18 +13,31 @@ const router = express.Router();
 // Get current sprint with real-time data
 router.get('/current', auth, async (req, res) => {
   try {
-    const currentSprint = await getCurrentSprint();
-    
+    const { communityId } = req.query;
+
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
+    }
+
+    const currentSprint = await Sprint.findOne({
+      communityId,
+      status: 'active'
+    }).sort({ startDate: -1 });
+
+    if (!currentSprint) {
+      return res.status(404).json({ message: 'No active sprint found for this community' });
+    }
+
     // If user is an employee, also get their personal sprint data
     if (req.user.role === 'employee') {
       const userSprintData = await calculateUserSprintPoints(req.user);
-      
+
       return res.json({
         ...currentSprint.toObject(),
         userSprintData
       });
     }
-    
+
     res.json(currentSprint);
   } catch (error) {
     console.error('Error getting current sprint:', error);
@@ -35,7 +48,13 @@ router.get('/current', auth, async (req, res) => {
 // Get sprint statistics (founder only)
 router.get('/statistics', auth, isFounder, async (req, res) => {
   try {
-    const stats = await getSprintStatistics();
+    const { communityId } = req.query;
+
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
+    }
+
+    const stats = await getSprintStatistics(communityId);
     res.json(stats);
   } catch (error) {
     console.error('Error getting sprint statistics:', error);
@@ -43,7 +62,7 @@ router.get('/statistics', auth, isFounder, async (req, res) => {
   }
 });
 
-// Sync sprint data with Quest Hive (founder only)
+// Sync sprint data (founder only)
 router.post('/sync', auth, isFounder, async (req, res) => {
   try {
     const result = await syncSprintData();
@@ -75,7 +94,13 @@ router.get('/my-points', auth, async (req, res) => {
 // Get all sprints (founder only)
 router.get('/', auth, isFounder, async (req, res) => {
   try {
-    const sprints = await Sprint.find()
+    const { communityId } = req.query;
+
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
+    }
+
+    const sprints = await Sprint.find({ communityId })
       .populate('eligibleUsers', 'name email')
       .sort({ sprintNumber: -1 });
     res.json(sprints);
@@ -84,22 +109,26 @@ router.get('/', auth, isFounder, async (req, res) => {
   }
 });
 
-// Create new sprint (founder only) - This should rarely be used as sprints come from Quest Hive
+// Create new sprint (founder only)
 router.post('/', auth, isFounder, async (req, res) => {
   try {
-    const { startDate, endDate, questHiveSprintId } = req.body;
-    
-    const sprintCount = await Sprint.countDocuments();
+    const { startDate, endDate, communityId } = req.body;
+
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
+    }
+
+    const sprintCount = await Sprint.countDocuments({ communityId });
     const sprint = new Sprint({
       sprintNumber: sprintCount + 1,
+      communityId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      status: 'active',
-      questHiveSprintId: questHiveSprintId || `manual-${Date.now()}`
+      status: 'active'
     });
-    
+
     await sprint.save();
-    
+
     res.status(201).json({
       message: 'Sprint created successfully',
       sprint

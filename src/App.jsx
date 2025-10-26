@@ -2,20 +2,26 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
-import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Leaderboard from '@/pages/Leaderboard';
 import Transactions from '@/pages/Transactions';
-import Tasks from '@/pages/Tasks';
 import AdminPanel from '@/pages/AdminPanel';
+import CommunityAdmin from '@/pages/CommunityAdmin';
+import SwitchCommunity from '@/pages/SwitchCommunity';
+import CreateCommunity from '@/pages/CreateCommunity';
+import Login from '@/pages/Login';
+import OTPVerification from '@/pages/OTPVerification';
 import '@/App.css';
+import '@/theme.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <div className="min-h-screen bg-black">
           <Toaster
             position="top-right"
@@ -30,6 +36,7 @@ function App() {
           />
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/otp-verification" element={<OTPVerification />} />
             <Route
               path="/"
               element={
@@ -61,29 +68,50 @@ function App() {
               }
             />
             <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Tasks />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/admin"
               element={
-                <ProtectedRoute requireFounder>
+                <ProtectedRoute requireCommunityOwner>
                   <DashboardLayout>
                     <AdminPanel />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/community-admin"
+              element={
+                <ProtectedRoute requireCommunityAdmin>
+                  <DashboardLayout>
+                    <CommunityAdmin />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/switch-community"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <SwitchCommunity />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-community"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <CreateCommunity />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

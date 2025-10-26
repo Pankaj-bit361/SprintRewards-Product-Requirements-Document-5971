@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import SafeIcon from '@/common/SafeIcon';
+import ThemeSwitcher from './ThemeSwitcher';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiUser, FiLogOut, FiMenu, FiX, FiTrendingUp, FiUsers, FiSettings, FiList, FiHome } = FiIcons;
+const { FiUser, FiLogOut, FiMenu, FiX, FiTrendingUp, FiUsers, FiSettings, FiHome } = FiIcons;
 
 const Sidebar = () => {
-  const { user, logout, isFounder } = useAuth();
+  const { user, logout, isFounder, isCommunityOwner } = useAuth();
+  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -33,15 +36,14 @@ const Sidebar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: FiHome },
-    { path: '/tasks', label: 'Tasks', icon: FiList },
     { path: '/leaderboard', label: 'Leaderboard', icon: FiUsers },
     { path: '/transactions', label: 'Transactions', icon: FiTrendingUp },
-    ...(isFounder ? [{ path: '/admin', label: 'Admin Panel', icon: FiSettings }] : []),
+    ...(isFounder || isCommunityOwner ? [{ path: '/admin', label: 'Admin Panel', icon: FiSettings }] : []),
   ];
 
   return (
@@ -50,23 +52,51 @@ const Sidebar = () => {
       <motion.div
         initial={{ x: -300 }}
         animate={{ x: 0 }}
-        className={`fixed left-0 top-0 h-full bg-gray-900 border-r border-gray-800 z-50 transition-all duration-300 flex flex-col ${
+        className={`fixed left-0 top-0 h-full z-50 transition-all duration-300 flex flex-col ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
+        style={{
+          backgroundColor: theme.surface,
+          borderRightColor: theme.border,
+          borderRightWidth: '1px',
+        }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
+        <div
+          className="flex items-center justify-between p-6 border-b"
+          style={{ borderColor: theme.border }}
+        >
           {!isCollapsed && (
             <Link to="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">SR</span>
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{
+                  backgroundColor: theme.primary,
+                  color: theme.background,
+                }}
+              >
+                <span className="font-bold text-sm">BR</span>
               </div>
-              <span className="font-bold text-xl text-white">SprintRewards</span>
+              <span className="font-bold text-xl" style={{ color: theme.text }}>
+                Bravo
+              </span>
             </Link>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
+            className="p-2 transition-colors rounded-lg"
+            style={{
+              color: theme.textSecondary,
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = theme.primaryLight;
+              e.target.style.color = theme.background;
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent';
+              e.target.style.color = theme.textSecondary;
+            }}
           >
             <SafeIcon icon={isCollapsed ? FiMenu : FiX} className="w-5 h-5" />
           </button>
@@ -79,16 +109,40 @@ const Sidebar = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all group relative ${
-                  location.pathname === item.path
-                    ? 'text-white bg-gray-800 shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                }`}
+                className="flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-all group relative"
+                style={{
+                  color:
+                    location.pathname === item.path
+                      ? theme.text
+                      : theme.textSecondary,
+                  backgroundColor:
+                    location.pathname === item.path
+                      ? theme.primaryLight
+                      : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (location.pathname !== item.path) {
+                    e.currentTarget.style.backgroundColor = theme.primaryLight;
+                    e.currentTarget.style.color = theme.background;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (location.pathname !== item.path) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = theme.textSecondary;
+                  }
+                }}
               >
                 <SafeIcon icon={item.icon} className="w-5 h-5 flex-shrink-0" />
                 {!isCollapsed && <span>{item.label}</span>}
                 {isCollapsed && (
-                  <div className="absolute left-16 bg-gray-800 text-white px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                  <div
+                    className="absolute left-16 px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50"
+                    style={{
+                      backgroundColor: theme.primary,
+                      color: theme.text,
+                    }}
+                  >
                     {item.label}
                   </div>
                 )}
@@ -98,44 +152,79 @@ const Sidebar = () => {
         </nav>
 
         {/* User Section - Fixed at bottom */}
-        <div className="border-t border-gray-800 p-4">
+        <div
+          className="border-t p-4"
+          style={{ borderColor: theme.border }}
+        >
           {!isCollapsed ? (
             <div className="space-y-4">
               {/* User Info */}
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700">
-                  <SafeIcon icon={FiUser} className="w-5 h-5 text-white" />
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center border"
+                  style={{
+                    backgroundColor: theme.primaryLight,
+                    borderColor: theme.border,
+                    color: theme.background,
+                  }}
+                >
+                  <SafeIcon icon={FiUser} className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{user?.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                  <p className="font-medium truncate" style={{ color: theme.text }}>
+                    {user?.name}
+                  </p>
+                  <p
+                    className="text-xs capitalize"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    {user?.role}
+                  </p>
                 </div>
               </div>
 
-              {/* Points Display */}
-              <div className="bg-gray-800 rounded-lg p-3 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-400">Sprint Points</span>
-                  <span className="text-sm font-bold text-white">{user?.sprintPoints || 0}/12</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-1.5">
-                  <div 
-                    className="bg-white h-1.5 rounded-full transition-all duration-300"
-                    style={{ width: `${((user?.sprintPoints || 0) / 12) * 100}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-400">Reward Points</span>
-                  <span className="text-sm font-bold text-white">
-                    {isFounder ? '∞' : user?.rewardPoints || 0}
-                  </span>
-                </div>
+              {/* Switch Community Button */}
+              <Link
+                to="/switch-community"
+                className="flex items-center space-x-2 w-full px-3 py-2 text-left rounded-lg transition-all"
+                style={{
+                  color: theme.textSecondary,
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.surfaceLight;
+                  e.currentTarget.style.color = theme.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.textSecondary;
+                }}
+              >
+                <SafeIcon icon={FiUsers} className="w-4 h-4" />
+                <span className="text-sm">Switch Community</span>
+              </Link>
+
+              {/* Theme Switcher */}
+              <div className="flex justify-center">
+                <ThemeSwitcher />
               </div>
 
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 w-full px-3 py-2 text-left text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+                className="flex items-center space-x-2 w-full px-3 py-2 text-left rounded-lg transition-all"
+                style={{
+                  color: theme.textSecondary,
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.primaryLight;
+                  e.currentTarget.style.color = theme.background;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.textSecondary;
+                }}
               >
                 <SafeIcon icon={FiLogOut} className="w-4 h-4" />
                 <span className="text-sm">Logout</span>
@@ -145,27 +234,86 @@ const Sidebar = () => {
             <div className="space-y-3">
               {/* Collapsed User Avatar */}
               <div className="flex justify-center">
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700 group relative">
-                  <SafeIcon icon={FiUser} className="w-5 h-5 text-white" />
-                  <div className="absolute left-12 bg-gray-800 text-white px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center border group relative"
+                  style={{
+                    backgroundColor: theme.primaryLight,
+                    borderColor: theme.border,
+                    color: theme.background,
+                  }}
+                >
+                  <SafeIcon icon={FiUser} className="w-5 h-5" />
+                  <div
+                    className="absolute left-12 px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50"
+                    style={{
+                      backgroundColor: theme.primary,
+                      color: theme.text,
+                    }}
+                  >
                     {user?.name}
                   </div>
                 </div>
               </div>
 
-              {/* Collapsed Points */}
-              <div className="text-center">
-                <div className="text-xs text-gray-400 mb-1">SP</div>
-                <div className="text-sm font-bold text-white">{user?.sprintPoints || 0}</div>
+              {/* Switch Community Button - Collapsed */}
+              <Link
+                to="/switch-community"
+                className="w-full p-2 rounded-lg transition-all group relative flex justify-center"
+                style={{
+                  color: theme.textSecondary,
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.surfaceLight;
+                  e.currentTarget.style.color = theme.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.textSecondary;
+                }}
+              >
+                <SafeIcon icon={FiUsers} className="w-4 h-4" />
+                <div
+                  className="absolute left-12 px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap top-1/2 transform -translate-y-1/2 z-50"
+                  style={{
+                    backgroundColor: theme.primary,
+                    color: theme.text,
+                  }}
+                >
+                  Switch Community
+                </div>
+              </Link>
+
+              {/* Theme Switcher - Collapsed */}
+              <div className="flex justify-center">
+                <ThemeSwitcher />
               </div>
 
               {/* Collapsed Logout */}
               <button
                 onClick={handleLogout}
-                className="w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all group relative"
+                className="w-full p-2 rounded-lg transition-all group relative"
+                style={{
+                  color: theme.textSecondary,
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.primaryLight;
+                  e.currentTarget.style.color = theme.background;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.textSecondary;
+                }}
               >
                 <SafeIcon icon={FiLogOut} className="w-4 h-4 mx-auto" />
-                <div className="absolute left-12 bg-gray-800 text-white px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap top-1/2 transform -translate-y-1/2 z-50">
+                <div
+                  className="absolute left-12 px-2 py-1 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap top-1/2 transform -translate-y-1/2 z-50"
+                  style={{
+                    backgroundColor: theme.primary,
+                    color: theme.text,
+                  }}
+                >
                   Logout
                 </div>
               </button>

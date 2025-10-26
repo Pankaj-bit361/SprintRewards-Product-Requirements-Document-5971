@@ -29,3 +29,25 @@ export const isFounder = (req, res, next) => {
   }
   next();
 };
+
+export const isFounderOrCommunityOwner = (req, res, next) => {
+  const { communityId } = req.query || req.body || req.params;
+
+  // Founders have access to everything
+  if (req.user.role === 'founder') {
+    return next();
+  }
+
+  // Community owners can only access their own community
+  if (communityId) {
+    const userCommunity = req.user.communities?.find(
+      c => c.communityId.toString() === communityId.toString()
+    );
+
+    if (userCommunity && userCommunity.role === 'owner') {
+      return next();
+    }
+  }
+
+  return res.status(403).json({ message: 'Access denied. Founder or community owner role required.' });
+};

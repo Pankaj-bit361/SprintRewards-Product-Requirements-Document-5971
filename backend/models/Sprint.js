@@ -3,8 +3,12 @@ import mongoose from 'mongoose';
 const sprintSchema = new mongoose.Schema({
   sprintNumber: {
     type: Number,
-    required: true,
-    unique: true
+    required: true
+  },
+  communityId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Community',
+    required: true
   },
   startDate: {
     type: Date,
@@ -31,17 +35,6 @@ const sprintSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // Quest Hive integration fields
-  questHiveSprintId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true
-  },
-  questHiveData: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  },
   lastSynced: {
     type: Date,
     default: Date.now
@@ -62,11 +55,13 @@ const sprintSchema = new mongoose.Schema({
     }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  autoIndex: false // Disable auto-indexing - indexes are managed manually via scripts
 });
 
-// Index for faster queries
-sprintSchema.index({ questHiveSprintId: 1 });
-sprintSchema.index({ status: 1, startDate: -1 });
+// Index definitions (not auto-created due to autoIndex: false)
+// Indexes are created via backend/scripts/completeSprintFix.js
+sprintSchema.index({ communityId: 1, status: 1, startDate: -1 });
+sprintSchema.index({ communityId: 1, sprintNumber: 1 }, { unique: true });
 
 export default mongoose.model('Sprint', sprintSchema);

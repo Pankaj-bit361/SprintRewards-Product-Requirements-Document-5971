@@ -35,8 +35,18 @@ const transactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Sprint',
     },
+    communityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Community',
+      required: true,
+    },
   },
   { timestamps: true }
 );
+
+// Index for faster queries
+transactionSchema.index({ communityId: 1, createdAt: -1 });
+transactionSchema.index({ fromUserId: 1, communityId: 1 });
+transactionSchema.index({ toUserId: 1, communityId: 1 });
 
 export default mongoose.model('Transaction', transactionSchema);

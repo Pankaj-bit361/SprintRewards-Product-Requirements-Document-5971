@@ -1,0 +1,209 @@
+/* Theme CSS Variables */
+:root {
+  /* Default Mehendi Theme */
+  --color-primary: #6B4423;
+  --color-primaryLight: #8B5A3C;
+  --color-primaryDark: #4A2F1A;
+  --color-accent: #D4A574;
+  --color-accentLight: #E8C4A0;
+  --color-accentDark: #B8935F;
+  --color-background: #0F0F0F;
+  --color-surface: #1A1A1A;
+  --color-surfaceLight: #2A2A2A;
+  --color-text: #FFFFFF;
+  --color-textSecondary: #B0B0B0;
+  --color-border: #333333;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+}
+
+/* Apply theme to body */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+/* Apply theme to inputs */
+input,
+textarea,
+select {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-textSecondary);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(107, 68, 35, 0.1);
+}
+
+/* Scrollbar theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primaryLight);
+}
+
+/* Selection theme */
+::selection {
+  background: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* Buttons with theme */
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+/* Cards with theme */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(107, 68, 35, 0.1);
+}
+
+/* Badge with theme */
+.badge {
+  background-color: var(--color-primaryLight);
+  color: var(--color-background);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Alert styles with theme */
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.alert-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.alert-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.alert-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+/* Progress bar with theme */
+.progress-bar {
+  background-color: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  height: 6px;
+}
+
+.progress-bar-fill {
+  background-color: var(--color-primary);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Gradient backgrounds with theme */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primaryLight));
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accentLight));
+}
+
+/* Text colors with theme */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.text-secondary {
+  color: var(--color-textSecondary);
+}
+
+/* Background colors with theme */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-accent {
+  background-color: var(--color-accent);
+}
+
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+/* Border colors with theme */
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.border-accent {
+  border-color: var(--color-accent);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Prevent transition on transform and opacity */
+*,
+*::before,
+*::after {
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+

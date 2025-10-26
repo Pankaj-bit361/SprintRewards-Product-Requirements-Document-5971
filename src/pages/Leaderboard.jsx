@@ -1,23 +1,38 @@
 import React,{useState,useEffect} from 'react';
 import {motion} from 'framer-motion';
+import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/api/axiosConfig.js';
 import SafeIcon from '@/common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 const {FiTrophy,FiGift,FiTrendingUp,FiUsers}=FiIcons;
 const Leaderboard=()=> {
+const { user } = useAuth();
+const { theme } = useTheme();
 const [leaderboard,setLeaderboard]=useState({topGivers: [],topReceivers: []});
 const [activeTab,setActiveTab]=useState('givers');
 const [loading,setLoading]=useState(true);
 useEffect(()=> {
+if (user?.currentCommunityId) {
 fetchLeaderboard();
-},[]);
+}
+},[user?.currentCommunityId]);
 const fetchLeaderboard=async ()=> {
 setLoading(true);
 try {
-const response=await api.get('/users/leaderboard');
+if (!user?.currentCommunityId) {
+toast.error('No community selected');
+setLoading(false);
+return;
+}
+const response=await api.get('/users/leaderboard', {
+params: { communityId: user.currentCommunityId }
+});
 setLeaderboard(response.data);
 } catch (error) {
 console.error('Error fetching leaderboard:',error);
+toast.error('Failed to load leaderboard');
 } finally {
 setLoading(false);
 }
@@ -49,30 +64,61 @@ return (
 <motion.div
 initial={{opacity: 0,y: 20}}
 animate={{opacity: 1,y: 0}}
-className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4"
+className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+style={{ backgroundColor: theme.primary, color: theme.background }}
 >
-<SafeIcon icon={FiTrophy} className="w-8 h-8 text-black" />
+<SafeIcon icon={FiTrophy} className="w-8 h-8" />
 </motion.div>
-<h1 className="text-4xl font-bold text-white mb-2">Leaderboard</h1>
-<p className="text-gray-400">Celebrate top performers and team players</p>
+<h1 className="text-4xl font-bold mb-2" style={{ color: theme.text }}>Leaderboard</h1>
+<p style={{ color: theme.textSecondary }}>Celebrate top performers and team players</p>
 </div>
 {/* Tab Navigation */}
 <div className="flex justify-center mb-8">
-<div className="bg-gray-900 p-1 rounded-lg border border-gray-800">
+<div
+  className="p-1 rounded-lg border"
+  style={{
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
+  }}
+>
 <button
 onClick={()=> setActiveTab('givers')}
-className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-activeTab==='givers' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white'
-}`}
+style={{
+  backgroundColor: activeTab === 'givers' ? theme.primary : 'transparent',
+  color: activeTab === 'givers' ? theme.background : theme.textSecondary,
+}}
+className="px-6 py-2 rounded-md text-sm font-medium transition-all"
+onMouseEnter={(e) => {
+  if (activeTab !== 'givers') {
+    e.currentTarget.style.color = theme.text;
+  }
+}}
+onMouseLeave={(e) => {
+  if (activeTab !== 'givers') {
+    e.currentTarget.style.color = theme.textSecondary;
+  }
+}}
 >
 <SafeIcon icon={FiGift} className="w-4 h-4 inline mr-2" />
 Top Givers
 </button>
 <button
 onClick={()=> setActiveTab('receivers')}
-className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-activeTab==='receivers' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white'
-}`}
+style={{
+  backgroundColor: activeTab === 'receivers' ? theme.primary : 'transparent',
+  color: activeTab === 'receivers' ? theme.background : theme.textSecondary,
+}}
+className="px-6 py-2 rounded-md text-sm font-medium transition-all"
+onMouseEnter={(e) => {
+  if (activeTab !== 'receivers') {
+    e.currentTarget.style.color = theme.text;
+  }
+}}
+onMouseLeave={(e) => {
+  if (activeTab !== 'receivers') {
+    e.currentTarget.style.color = theme.textSecondary;
+  }
+}}
 >
 <SafeIcon icon={FiTrendingUp} className="w-4 h-4 inline mr-2" />
 Top Receivers
@@ -85,14 +131,21 @@ key={activeTab}
 initial={{opacity: 0,x: 20}}
 animate={{opacity: 1,x: 0}}
 transition={{duration: 0.3}}
-className="bg-gray-900 border border-gray-800 rounded-xl"
+className="border rounded-xl"
+style={{
+  backgroundColor: theme.surface,
+  borderColor: theme.border,
+}}
 >
-<div className="p-6 border-b border-gray-800">
-<h2 className="text-lg font-semibold text-white flex items-center">
-<SafeIcon icon={activeTab==='givers' ? FiGift : FiTrendingUp} className="w-5 h-5 mr-2 text-white" />
+<div
+  className="p-6 border-b"
+  style={{ borderColor: theme.border }}
+>
+<h2 className="text-lg font-semibold flex items-center" style={{ color: theme.text }}>
+<SafeIcon icon={activeTab==='givers' ? FiGift : FiTrendingUp} className="w-5 h-5 mr-2" style={{ color: theme.primary }} />
 {activeTab==='givers' ? 'Most Generous Team Members' : 'Most Appreciated Team Members'}
 </h2>
-<p className="text-sm text-gray-400 mt-1">
+<p className="text-sm mt-1" style={{ color: theme.textSecondary }}>
 {activeTab==='givers'
 ? 'Employees who share the most points with their teammates'
 : 'Employees who receive the most recognition from peers'}
@@ -107,23 +160,40 @@ key={user._id}
 initial={{opacity: 0,y: 20}}
 animate={{opacity: 1,y: 0}}
 transition={{delay: index * 0.1}}
-className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:bg-gray-800 ${
-index < 3 ? 'border-gray-700 bg-gray-800' : 'border-gray-800 bg-gray-900'
-}`}
+className="flex items-center justify-between p-4 rounded-lg border-2 transition-all"
+style={{
+  backgroundColor: index < 3 ? theme.surfaceLight : theme.surface,
+  borderColor: index < 3 ? theme.primary : theme.border,
+}}
+onMouseEnter={(e) => {
+  e.currentTarget.style.backgroundColor = theme.surfaceLight;
+}}
+onMouseLeave={(e) => {
+  e.currentTarget.style.backgroundColor = index < 3 ? theme.surfaceLight : theme.surface;
+}}
 >
 <div className="flex items-center space-x-4">
 {/* Rank */}
-<div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${getRankColor(index)}`}>
+<div
+  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg"
+  style={{
+    backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : theme.surfaceLight,
+    color: index < 3 ? '#000' : theme.text,
+  }}
+>
 {getRankIcon(index)}
 </div>
 {/* Avatar */}
-<div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
-<SafeIcon icon={FiUsers} className="w-6 h-6 text-white" />
+<div
+  className="w-12 h-12 rounded-full flex items-center justify-center"
+  style={{ backgroundColor: theme.primaryLight, color: theme.background }}
+>
+<SafeIcon icon={FiUsers} className="w-6 h-6" />
 </div>
 {/* User Info */}
 <div>
-<h3 className="font-semibold text-white">{user.name}</h3>
-<p className="text-sm text-gray-400">
+<h3 className="font-semibold" style={{ color: theme.text }}>{user.name}</h3>
+<p className="text-sm" style={{ color: theme.textSecondary }}>
 {activeTab==='givers' ? 'Points Given' : 'Points Received'}
 </p>
 </div>
@@ -164,18 +234,36 @@ animate={{opacity: 1,y: 0}}
 transition={{delay: 0.5}}
 className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4"
 >
-<div className="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center">
-<div className="text-2xl font-bold text-white">
+<div
+className="border rounded-lg p-4 text-center"
+style={{
+backgroundColor: theme.surface,
+borderColor: theme.border,
+}}
+>
+<div className="text-2xl font-bold" style={{ color: theme.text }}>
 {currentData.reduce((sum,user)=> sum + (activeTab==='givers' ? user.totalGiven : user.totalReceived),0)}
 </div>
-<div className="text-sm text-gray-400">Total Points {activeTab==='givers' ? 'Given' : 'Received'}</div>
+<div className="text-sm" style={{ color: theme.textSecondary }}>Total Points {activeTab==='givers' ? 'Given' : 'Received'}</div>
 </div>
-<div className="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center">
-<div className="text-2xl font-bold text-white">{currentData.length}</div>
-<div className="text-sm text-gray-400">Active Participants</div>
+<div
+className="border rounded-lg p-4 text-center"
+style={{
+backgroundColor: theme.surface,
+borderColor: theme.border,
+}}
+>
+<div className="text-2xl font-bold" style={{ color: theme.text }}>{currentData.length}</div>
+<div className="text-sm" style={{ color: theme.textSecondary }}>Active Participants</div>
 </div>
-<div className="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center">
-<div className="text-2xl font-bold text-white">
+<div
+className="border rounded-lg p-4 text-center"
+style={{
+backgroundColor: theme.surface,
+borderColor: theme.border,
+}}
+>
+<div className="text-2xl font-bold" style={{ color: theme.text }}>
 {currentData.length > 0
 ? Math.round(
 currentData.reduce((sum,user)=> sum + (activeTab==='givers' ? user.totalGiven : user.totalReceived),0) /
@@ -183,7 +271,7 @@ currentData.length
 )
 : 0}
 </div>
-<div className="text-sm text-gray-400">Average Points</div>
+<div className="text-sm" style={{ color: theme.textSecondary }}>Average Points</div>
 </div>
 </motion.div>
 )}

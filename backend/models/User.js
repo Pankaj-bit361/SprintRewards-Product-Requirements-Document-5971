@@ -117,6 +117,44 @@ const userSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Sprint'
     }
+  },
+  // Multi-community support
+  communities: [{
+    communityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Community'
+    },
+    role: {
+      type: String,
+      enum: ['owner', 'admin', 'member'],
+      default: 'member'
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    },
+    // Community-specific points
+    rewardPoints: {
+      type: Number,
+      default: 0
+    },
+    claimablePoints: {
+      type: Number,
+      default: 0
+    },
+    totalGiven: {
+      type: Number,
+      default: 0
+    },
+    totalReceived: {
+      type: Number,
+      default: 0
+    }
+  }],
+  currentCommunityId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Community',
+    default: null
   }
 }, {
   timestamps: true
@@ -140,53 +178,26 @@ userSchema.methods.comparePassword = async function(password) {
   return bcrypt.compare(password, this.password);
 };
 
-// Method to sync with Quest Hive data
-userSchema.methods.syncWithQuestHive = function(questHiveUser) {
-  this.questHiveData = {
-    entityId: questHiveUser.entityId,
-    companyRole: questHiveUser.companyRole || questHiveUser.role,
-    team: questHiveUser.team || [],
-    avatar: questHiveUser.avatar || '',
-    lastSynced: new Date()
-  };
-  
-  // Update avatar if Quest Hive has one and we don't
-  if (questHiveUser.avatar && !this.avatar) {
-    this.avatar = questHiveUser.avatar;
-  }
-};
-
-// Method to update sprint data
 userSchema.methods.updateSprintData = function(sprintData) {
   this.sprintData = {
     ...this.sprintData,
     ...sprintData,
     lastUpdated: new Date()
   };
-  
+
   // Update sprint points based on task completion
   this.sprintPoints = sprintData.sprintPoints || this.sprintPoints;
   this.isEligible = this.sprintPoints >= 8; // Threshold for eligibility
 };
 
-// Static method to find user by Quest Hive ID
-userSchema.statics.findByQuestHiveId = function(questHiveUserId) {
-  return this.findOne({ questHiveUserId });
-};
-
-// Static method to get users with Quest Hive mapping
-userSchema.statics.findMappedUsers = function() {
-  return this.find({ questHiveUserId: { $ne: null } });
-};
-
 // Static method to get sprint statistics for all users
 userSchema.statics.getSprintStatistics = async function() {
-  const users = await this.find({ role: 'employee', questHiveUserId: { $ne: null } });
-  
+  const users = await this.find({ role: 'employee' });
+
   return {
     totalUsers: users.length,
     eligibleUsers: users.filter(user => user.isEligible).length,
-    averageSprintPoints: users.length > 0 ? 
+    averageSprintPoints: users.length > 0 ?
       users.reduce((sum, user) => sum + user.sprintPoints, 0) / users.length : 0,
     totalTasks: users.reduce((sum, user) => sum + (user.sprintData?.totalTasks || 0), 0),
     completedTasks: users.reduce((sum, user) => sum + (user.sprintData?.completedTasks || 0), 0)

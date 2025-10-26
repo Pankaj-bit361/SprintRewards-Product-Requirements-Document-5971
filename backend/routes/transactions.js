@@ -1,18 +1,22 @@
 import express from 'express';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
-import { auth, isFounder } from '../middleware/auth.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Send points to another user
 router.post('/send', auth, async (req, res) => {
   try {
-    const { toUserId, points, message } = req.body;
+    const { toUserId, points, message, communityId } = req.body;
     const fromUserId = req.user._id;
 
     if (fromUserId.toString() === toUserId) {
       return res.status(400).json({ message: 'Cannot send points to yourself' });
+    }
+
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
     }
 
     const sender = await User.findById(fromUserId);
@@ -24,13 +28,27 @@ router.post('/send', auth, async (req, res) => {
 
     const pointsNum = Number(points);
 
-    // Bypass balance check for founder, but check for employees
-    if (sender.role !== 'founder' && sender.rewardPoints < pointsNum) {
-      return res.status(400).json({ message: 'Insufficient reward points' });
+    // Find sender's community-specific balance
+    const senderCommunity = sender.communities.find(
+      c => c.communityId.toString() === communityId.toString()
+    );
+
+    if (!senderCommunity) {
+      return res.status(403).json({ message: 'You are not a member of this community' });
     }
 
-    // Check if transaction needs approval
-    const needsApproval = sender.role !== 'founder' && pointsNum > 100;
+    const senderBalance = senderCommunity.rewardPoints || 0;
+    const isCommunityOwner = senderCommunity.role === 'owner';
+
+    // Bypass balance check for founder or community owner
+    if (sender.role !== 'founder' && !isCommunityOwner && senderBalance < pointsNum) {
+      return res.status(400).json({
+        message: `Insufficient reward points in this community. You have ${senderBalance} points.`
+      });
+    }
+
+    // Check if transaction needs approval (founders and owners don't need approval)
+    const needsApproval = sender.role !== 'founder' && !isCommunityOwner && pointsNum > 100;
 
     const transaction = new Transaction({
       fromUserId,
@@ -39,19 +57,28 @@ router.post('/send', auth, async (req, res) => {
       message,
       type: 'transfer',
       status: needsApproval ? 'pending' : 'approved',
+      communityId,
     });
     await transaction.save();
 
     if (!needsApproval) {
-      // Do not decrement founder's points
-      if (sender.role !== 'founder') {
-        sender.rewardPoints -= pointsNum;
+      // Update sender's community-specific points ONLY (skip for founders and owners)
+      if (sender.role !== 'founder' && !isCommunityOwner) {
+        senderCommunity.rewardPoints = (senderCommunity.rewardPoints || 0) - pointsNum;
       }
-      sender.totalGiven += pointsNum;
+      senderCommunity.totalGiven = (senderCommunity.totalGiven || 0) + pointsNum;
       await sender.save();
 
-      recipient.rewardPoints += pointsNum;
-      recipient.totalReceived += pointsNum;
+      // Update recipient's community-specific points ONLY
+      const recipientCommunity = recipient.communities.find(
+        c => c.communityId.toString() === communityId.toString()
+      );
+
+      if (recipientCommunity) {
+        // Add to claimablePoints (NOT rewardPoints - received points are claimable, not re-giftable)
+        recipientCommunity.claimablePoints = (recipientCommunity.claimablePoints || 0) + pointsNum;
+        recipientCommunity.totalReceived = (recipientCommunity.totalReceived || 0) + pointsNum;
+      }
       await recipient.save();
     }
 
@@ -70,12 +97,24 @@ router.post('/send', auth, async (req, res) => {
   }
 });
 
-// Approve a transaction (founder only)
-router.post('/:id/approve', auth, isFounder, async (req, res) => {
+// Approve a transaction (founder or community owner)
+router.post('/:id/approve', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction || transaction.status !== 'pending') {
       return res.status(404).json({ message: 'Pending transaction not found.' });
+    }
+
+    // Check if user is founder or community owner
+    const communityId = transaction.communityId.toString();
+    const isFounder = req.user.role === 'founder';
+    const userCommunity = req.user.communities?.find(
+      c => c.communityId.toString() === communityId
+    );
+    const isCommunityOwner = userCommunity && userCommunity.role === 'owner';
+
+    if (!isFounder && !isCommunityOwner) {
+      return res.status(403).json({ message: 'Access denied. Founder or community owner role required.' });
     }
 
     const sender = await User.findById(transaction.fromUserId);
@@ -85,17 +124,39 @@ router.post('/:id/approve', auth, isFounder, async (req, res) => {
       return res.status(404).json({ message: 'Sender or recipient not found.' });
     }
 
-    if (sender.rewardPoints < transaction.points) {
+    // Find sender's community-specific balance
+    const senderCommunity = sender.communities.find(
+      c => c.communityId.toString() === transaction.communityId.toString()
+    );
+
+    if (!senderCommunity) {
+      transaction.status = 'rejected';
+      await transaction.save();
+      return res.status(400).json({ message: 'Sender is not a member of this community. Transaction rejected.' });
+    }
+
+    const senderBalance = senderCommunity.rewardPoints || 0;
+
+    if (senderBalance < transaction.points) {
       transaction.status = 'rejected';
       await transaction.save();
       return res.status(400).json({ message: 'Sender has insufficient points. Transaction rejected.' });
     }
 
-    sender.rewardPoints -= transaction.points;
-    sender.totalGiven += transaction.points;
-    
-    recipient.rewardPoints += transaction.points;
-    recipient.totalReceived += transaction.points;
+    // Update sender's community-specific points ONLY
+    senderCommunity.rewardPoints = (senderCommunity.rewardPoints || 0) - transaction.points;
+    senderCommunity.totalGiven = (senderCommunity.totalGiven || 0) + transaction.points;
+
+    // Update recipient's community-specific points ONLY
+    const recipientCommunity = recipient.communities.find(
+      c => c.communityId.toString() === transaction.communityId.toString()
+    );
+
+    if (recipientCommunity) {
+      // Add to claimablePoints (NOT rewardPoints - received points are claimable, not re-giftable)
+      recipientCommunity.claimablePoints = (recipientCommunity.claimablePoints || 0) + transaction.points;
+      recipientCommunity.totalReceived = (recipientCommunity.totalReceived || 0) + transaction.points;
+    }
 
     transaction.status = 'approved';
 
@@ -109,13 +170,25 @@ router.post('/:id/approve', auth, isFounder, async (req, res) => {
   }
 });
 
-// Reject a transaction (founder only)
-router.post('/:id/reject', auth, isFounder, async (req, res) => {
+// Reject a transaction (founder or community owner)
+router.post('/:id/reject', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
 
     if (!transaction || transaction.status !== 'pending') {
       return res.status(404).json({ message: 'Pending transaction not found.' });
+    }
+
+    // Check if user is founder or community owner
+    const communityId = transaction.communityId.toString();
+    const isFounder = req.user.role === 'founder';
+    const userCommunity = req.user.communities?.find(
+      c => c.communityId.toString() === communityId
+    );
+    const isCommunityOwner = userCommunity && userCommunity.role === 'owner';
+
+    if (!isFounder && !isCommunityOwner) {
+      return res.status(403).json({ message: 'Access denied. Founder or community owner role required.' });
     }
 
     transaction.status = 'rejected';
@@ -131,20 +204,29 @@ router.post('/:id/reject', auth, isFounder, async (req, res) => {
 router.get('/history', auth, async (req, res) => {
   try {
     const userId = req.user._id;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, communityId, all = false } = req.query;
 
-    const transactions = await Transaction.find({
-      $or: [{ fromUserId: userId }, { toUserId: userId }],
-    })
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
+    }
+
+    // Build query
+    let query = { communityId };
+
+    // If 'all' is true, show all transactions in the community (for admins)
+    // Otherwise, show only user's transactions
+    if (!all || all === 'false') {
+      query.$or = [{ fromUserId: userId }, { toUserId: userId }];
+    }
+
+    const transactions = await Transaction.find(query)
       .populate('fromUserId', 'name email')
       .populate('toUserId', 'name email')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const total = await Transaction.countDocuments({
-      $or: [{ fromUserId: userId }, { toUserId: userId }],
-    });
+    const total = await Transaction.countDocuments(query);
 
     res.json({
       transactions,
@@ -156,23 +238,46 @@ router.get('/history', auth, async (req, res) => {
   }
 });
 
-// Get all transactions (founder only)
-router.get('/all', auth, isFounder, async (req, res) => {
+// Get all transactions (founder or community owner scoped)
+router.get('/all', auth, async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const transactions = await Transaction.find()
+    const { page = 1, limit = 20, communityId } = req.query;
+
+    // Founders can view all (optionally filtered by community)
+    if (req.user.role === 'founder') {
+      const query = communityId ? { communityId } : {};
+      const transactions = await Transaction.find(query)
+        .populate('fromUserId', 'name email')
+        .populate('toUserId', 'name email')
+        .populate('communityId', 'name')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit);
+      return res.json(transactions);
+    }
+
+    // Community owners must provide communityId and be owner of that community
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community ID is required' });
+    }
+
+    const userCommunity = req.user.communities?.find(
+      c => c.communityId.toString() === communityId.toString()
+    );
+
+    if (!userCommunity || userCommunity.role !== 'owner') {
+      return res.status(403).json({ message: 'Access denied. Owner role for this community required.' });
+    }
+
+    const transactions = await Transaction.find({ communityId })
       .populate('fromUserId', 'name email')
       .populate('toUserId', 'name email')
+      .populate('communityId', 'name')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const total = await Transaction.countDocuments();
-    res.json({
-      transactions,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-    });
+    return res.json(transactions);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

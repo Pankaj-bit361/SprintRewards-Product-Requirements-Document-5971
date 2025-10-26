@@ -2,14 +2,13 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import cron from 'node-cron';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import sprintRoutes from './routes/sprints.js';
 import transactionRoutes from './routes/transactions.js';
-import taskRoutes from './routes/tasks.js';
-import questHiveRoutes from './routes/questHive.js';
-import { runWeeklyAICheck, resetSprint } from './services/aiService.js';
+import communityRoutes from './routes/communities.js';
+import uploadRoutes from './routes/uploads.js';
+import { initializeCronJobs } from './services/cronJobs.js';
 
 dotenv.config();
 
@@ -25,8 +24,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/sprints', sprintRoutes);
 app.use('/api/transactions', transactionRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/quest-hive', questHiveRoutes);
+app.use('/api/communities', communityRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -39,8 +38,6 @@ app.get('/', (req, res) => {
       users: '/api/users',
       sprints: '/api/sprints',
       transactions: '/api/transactions',
-      tasks: '/api/tasks',
-      questHive: '/api/quest-hive',
       health: '/api/health'
     },
     documentation: 'https://github.com/your-repo/sprint-rewards'
@@ -69,6 +66,13 @@ const connectDB = async () => {
 
 // Initialize DB connection
 connectDB();
+
+// Initialize cron jobs for automatic sprint management
+if (process.env.NODE_ENV !== 'production') {
+  // Only run cron jobs in development/local environment
+  // In production, use a separate worker process or cloud scheduler
+  initializeCronJobs();
+}
 
 // Export the app for Vercel
 export default app;

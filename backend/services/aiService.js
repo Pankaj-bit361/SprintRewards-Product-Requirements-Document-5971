@@ -49,22 +49,22 @@ export const runAICheck = async (userId) => {
 export const runWeeklyAICheck = async () => {
   try {
     console.log('Running weekly AI check...');
-    
-    // Sync sprint data with Quest Hive first
+
+    // Sync sprint data first
     await syncSprintData();
-    
-    const employees = await User.find({ role: 'employee', questHiveUserId: { $ne: null } });
+
+    const employees = await User.find({ role: 'employee' });
     const currentSprint = await Sprint.findOne({ status: 'active' });
-    
+
     if (!currentSprint) {
       console.log('No active sprint found');
       return;
     }
 
     const eligibleUsers = [];
-    
+
     for (const employee of employees) {
-      // Use Quest Hive-based eligibility (already calculated in syncSprintData)
+      // Use eligibility (already calculated in syncSprintData)
       if (employee.isEligible) {
         eligibleUsers.push(employee._id);
       }
@@ -119,10 +119,10 @@ export const resetSprint = async () => {
       }
     );
 
-    // Sync with Quest Hive to get new sprint data
+    // Sync to get new sprint data
     await syncSprintData();
 
-    console.log('Sprint reset completed and synced with Quest Hive.');
+    console.log('Sprint reset completed and synced.');
     return {
       success: true,
       message: 'Sprint reset completed successfully'

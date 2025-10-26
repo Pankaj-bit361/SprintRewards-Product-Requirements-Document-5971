@@ -2,8 +2,13 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ProtectedRoute = ({ children, requireFounder = false }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({
+  children,
+  requireFounder = false,
+  requireCommunityOwner = false,
+  requireCommunityAdmin = false
+}) => {
+  const { user, loading, currentCommunityRole } = useAuth();
 
   if (loading) {
     return (
@@ -17,7 +22,18 @@ const ProtectedRoute = ({ children, requireFounder = false }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Check global founder role
   if (requireFounder && user.role !== 'founder') {
+    return <Navigate to="/" replace />;
+  }
+
+  // Check community owner role (founders are also allowed)
+  if (requireCommunityOwner && user.role !== 'founder' && currentCommunityRole !== 'owner') {
+    return <Navigate to="/" replace />;
+  }
+
+  // Check community admin role (owner or admin, founders also allowed)
+  if (requireCommunityAdmin && user.role !== 'founder' && !['owner', 'admin'].includes(currentCommunityRole)) {
     return <Navigate to="/" replace />;
   }
 
