@@ -80,7 +80,7 @@ export const sendOTPEmail = async (email, otp, userName = 'User') => {
 
 
     const command = new SendEmailCommand({
-      Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@`.com',
+      Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@bravorewards.com',
       Destination: { ToAddresses: [email] },
       Message: {
         Subject: { Data: `Your Secure ${brandName} Sign-In Code`, Charset: 'UTF-8' },
