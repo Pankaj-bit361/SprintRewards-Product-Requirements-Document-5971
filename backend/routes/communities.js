@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import Invitation from '../models/Invitation.js';
 import { auth } from '../middleware/auth.js';
 import { createWeeklySprint } from '../services/sprintService.js';
-import { sendInvitationEmail } from '../services/emailService.js';
+import { sendInvitationEmail, sendCommunityAddedEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -209,15 +209,47 @@ router.post('/:communityId/invite', auth, async (req, res) => {
       // Owners get 0 points (they have unlimited), regular members get 500
       const initialPoints = role === 'owner' ? 0 : (community.settings?.rewardPointsPerSprint || 500);
 
-      existingUser.communities.push({
-        communityId: community._id,
-        role: role,
-        rewardPoints: initialPoints,
-        claimablePoints: 0,
-        totalGiven: 0,
-        totalReceived: 0
-      });
+      // Check if user already has this community in their array (shouldn't happen, but just in case)
+      const existingCommunityIndex = existingUser.communities.findIndex(
+        c => c.communityId.toString() === community._id.toString()
+      );
+
+      if (existingCommunityIndex !== -1) {
+        // Update existing community entry
+        existingUser.communities[existingCommunityIndex] = {
+          communityId: community._id,
+          role: role,
+          rewardPoints: initialPoints,
+          claimablePoints: 0,
+          totalGiven: 0,
+          totalReceived: 0
+        };
+      } else {
+        // Add new community entry
+        existingUser.communities.push({
+          communityId: community._id,
+          role: role,
+          rewardPoints: initialPoints,
+          claimablePoints: 0,
+          totalGiven: 0,
+          totalReceived: 0
+        });
+      }
       await existingUser.save();
+
+      // Send notification email to existing user
+      try {
+        await sendCommunityAddedEmail(
+          existingUser.email,
+          existingUser.name,
+          community.name,
+          req.user.name,
+          role
+        );
+      } catch (emailError) {
+        console.error('Failed to send community added email:', emailError);
+        // Don't fail the request if email fails
+      }
 
       return res.json({
         message: `User added to community as ${role} successfully`,
@@ -373,6 +405,13 @@ router.delete('/:communityId/members/:userId', auth, async (req, res) => {
     community.members = community.members.filter(
       m => m.userId.toString() !== userId
     );
+
+    // Remove from admins array if they were an admin
+    community.admins = community.admins.filter(
+      adminId => adminId.toString() !== userId
+    );
+
+    community.stats.totalMembers = community.members.length;
     await community.save();
 
     // Remove from user's communities array

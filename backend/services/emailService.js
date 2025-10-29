@@ -193,6 +193,7 @@ export const sendWelcomeEmail = async (email, userName = 'User') => {
 
 // Send Invitation Email
 export const sendInvitationEmail = async (email, communityName, inviterName, role, invitationToken) => {
+  console.log('Sending invitation email to:', email, 'for', communityName, 'as', role, 'with token', invitationToken);
   try {
     const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/#/login?invite=${invitationToken}`;
     const year = new Date().getFullYear();
@@ -269,6 +270,89 @@ export const sendInvitationEmail = async (email, communityName, inviterName, rol
     return { success: true, messageId: result.MessageId };
   } catch (error) {
     console.error('Error sending invitation email:', error);
+    throw error;
+  }
+};
+
+// Send Community Re-Added Email (for existing users)
+export const sendCommunityAddedEmail = async (email, userName, communityName, inviterName, role) => {
+  console.log('Sending community added email to:', email, 'for', communityName, 'as', role);
+  try {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const dashboardUrl = `${frontendUrl}/#/`;
+    const year = new Date().getFullYear();
+    const brandName = process.env.BRAND_NAME || 'Bravo Rewards';
+    const accent = process.env.BRAND_ACCENT_HEX || '#22c55e';
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You've been added to ${communityName}</title>
+<style>
+  body{margin:0;background-color:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';color:#374151;}
+  .container{max-width:600px;margin:0 auto;padding:32px;}
+  .card{background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+  .header{background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;}
+  .brand{display:inline-block;font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827}
+  .accent{display:block;height:3px;width:56px;background:${accent};border-radius:2px;margin-top:10px}
+  .content{padding:28px;background:#ffffff}
+  .h1{margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700}
+  .muted{color:#6b7280;font-size:14px;line-height:1.6}
+  .invite-box{background:#f0fdf4;border:1px solid #dcfce7;border-radius:12px;padding:20px;margin:20px 0;text-align:center}
+  .invite-role{font-size:18px;font-weight:700;color:${accent};margin:0 0 8px 0}
+  .button{display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;margin-top:14px}
+  .footer{padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center}
+  .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+  @media only screen and (max-width:480px){.container{padding:16px!important}.content{padding:20px!important}.header{padding:20px!important}}
+</style>
+</head>
+<body style="background-color:#f9fafb;margin:0;padding:0;">
+  <div class="preheader">You've been added to ${communityName} on ${brandName}</div>
+  <div class="container" style="max-width:600px;margin:0 auto;padding:32px;background-color:#f9fafb;">
+    <div class="card" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <div class="header" style="background:#ffffff;padding:28px;border-bottom:1px solid #e5e7eb;">
+        <span class="brand" style="display:inline-block;font-weight:700;font-size:20px;letter-spacing:.3px;color:#111827">${brandName}</span>
+        <span class="accent" style="display:block;height:3px;width:56px;background:${accent};border-radius:2px;margin-top:10px"></span>
+      </div>
+      <div class="content" style="padding:28px;background:#ffffff">
+        <p class="h1" style="margin:0 0 8px 0;font-size:22px;color:#111827;font-weight:700">Welcome back, ${userName}!</p>
+        <p class="muted"><strong>${inviterName}</strong> has added you to <strong>${communityName}</strong> on ${brandName}.</p>
+        <div class="invite-box" style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
+          <p class="invite-role" style="font-size:18px;font-weight:700;color:${accent};margin:0 0 8px 0">Added as ${role.toUpperCase()}</p>
+          <p class="muted" style="margin:0;color:#6b7280;font-size:14px;line-height:1.6">You can now access the community and start earning reward points!</p>
+        </div>
+        <div style="text-align:center">
+          <a href="${dashboardUrl}" class="button" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:10px;margin-top:14px">Open Dashboard</a>
+        </div>
+        <p class="muted" style="color:#6b7280;font-size:14px;line-height:1.6;margin-top:18px">Log in to your account to access ${communityName} and start collaborating with your team.</p>
+      </div>
+      <div class="footer" style="padding:18px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center">© ${year} ${brandName}. All rights reserved.</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const textContent = `Welcome back to ${communityName}!\n\nHi ${userName},\n\n${inviterName} has added you to ${communityName} on ${brandName} as ${role}.\n\nYou can now access the community and start earning reward points!\n\nOpen Dashboard: ${dashboardUrl}\n\n© ${year} ${brandName}`;
+
+    const command = new SendEmailCommand({
+      Source: process.env.AWS_SES_FROM_EMAIL || 'noreply@bravorewards.com',
+      Destination: { ToAddresses: [email] },
+      Message: {
+        Subject: { Data: `You've been added to ${communityName} on ${brandName}!`, Charset: 'UTF-8' },
+        Body: {
+          Text: { Data: textContent, Charset: 'UTF-8' },
+          Html: { Data: htmlContent, Charset: 'UTF-8' }
+        }
+      }
+    });
+
+    const result = await ses.send(command);
+    console.log('Community added email sent successfully:', result.MessageId);
+    return { success: true, messageId: result.MessageId };
+  } catch (error) {
+    console.error('Error sending community added email:', error);
     throw error;
   }
 };

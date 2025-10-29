@@ -10,7 +10,7 @@ import * as FiIcons from 'react-icons/fi';
 const { FiUser, FiLogOut, FiMenu, FiX, FiTrendingUp, FiUsers, FiSettings, FiHome } = FiIcons;
 
 const Sidebar = () => {
-  const { user, logout, isFounder, isCommunityOwner } = useAuth();
+  const { user, logout, isFounder, isCommunityAdmin } = useAuth();
   const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const Sidebar = () => {
     { path: '/', label: 'Dashboard', icon: FiHome },
     { path: '/leaderboard', label: 'Leaderboard', icon: FiUsers },
     { path: '/transactions', label: 'Transactions', icon: FiTrendingUp },
-    ...(isFounder || isCommunityOwner ? [{ path: '/admin', label: 'Admin Panel', icon: FiSettings }] : []),
+    ...(isFounder || isCommunityAdmin ? [{ path: '/admin', label: 'Admin Panel', icon: FiSettings }] : []),
   ];
 
   return (

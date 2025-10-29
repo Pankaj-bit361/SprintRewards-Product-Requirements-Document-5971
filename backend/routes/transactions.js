@@ -97,7 +97,7 @@ router.post('/send', auth, async (req, res) => {
   }
 });
 
-// Approve a transaction (founder or community owner)
+// Approve a transaction (founder, community owner, or community admin)
 router.post('/:id/approve', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
@@ -105,16 +105,17 @@ router.post('/:id/approve', auth, async (req, res) => {
       return res.status(404).json({ message: 'Pending transaction not found.' });
     }
 
-    // Check if user is founder or community owner
+    // Check if user is founder, community owner, or community admin
     const communityId = transaction.communityId.toString();
     const isFounder = req.user.role === 'founder';
     const userCommunity = req.user.communities?.find(
       c => c.communityId.toString() === communityId
     );
     const isCommunityOwner = userCommunity && userCommunity.role === 'owner';
+    const isCommunityAdmin = userCommunity && userCommunity.role === 'admin';
 
-    if (!isFounder && !isCommunityOwner) {
-      return res.status(403).json({ message: 'Access denied. Founder or community owner role required.' });
+    if (!isFounder && !isCommunityOwner && !isCommunityAdmin) {
+      return res.status(403).json({ message: 'Access denied. Founder, community owner, or admin role required.' });
     }
 
     const sender = await User.findById(transaction.fromUserId);
@@ -170,7 +171,7 @@ router.post('/:id/approve', auth, async (req, res) => {
   }
 });
 
-// Reject a transaction (founder or community owner)
+// Reject a transaction (founder, community owner, or community admin)
 router.post('/:id/reject', auth, async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
@@ -179,16 +180,17 @@ router.post('/:id/reject', auth, async (req, res) => {
       return res.status(404).json({ message: 'Pending transaction not found.' });
     }
 
-    // Check if user is founder or community owner
+    // Check if user is founder, community owner, or community admin
     const communityId = transaction.communityId.toString();
     const isFounder = req.user.role === 'founder';
     const userCommunity = req.user.communities?.find(
       c => c.communityId.toString() === communityId
     );
     const isCommunityOwner = userCommunity && userCommunity.role === 'owner';
+    const isCommunityAdmin = userCommunity && userCommunity.role === 'admin';
 
-    if (!isFounder && !isCommunityOwner) {
-      return res.status(403).json({ message: 'Access denied. Founder or community owner role required.' });
+    if (!isFounder && !isCommunityOwner && !isCommunityAdmin) {
+      return res.status(403).json({ message: 'Access denied. Founder, community owner, or admin role required.' });
     }
 
     transaction.status = 'rejected';

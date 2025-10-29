@@ -23,7 +23,7 @@ const {
 } = FiIcons;
 
 const AdminPanel = () => {
-  const { user, isFounder, isCommunityOwner } = useAuth();
+  const { user, isFounder, isCommunityOwner, isCommunityAdmin } = useAuth();
   const { theme } = useTheme();
   const [employees, setEmployees] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -48,8 +48,8 @@ const AdminPanel = () => {
           api.get(`/users?communityId=${communityId}`),
           api.get(`/transactions/all?limit=100&communityId=${communityId}`)
         ]);
-      } else if (isCommunityOwner) {
-        // Community owners see only their community's members and transactions
+      } else if (isCommunityOwner || isCommunityAdmin) {
+        // Community owners and admins see only their community's members and transactions
         [employeesRes, transactionsRes] = await Promise.all([
           api.get(`/communities/${communityId}/members?includeAll=true`),
           api.get(`/transactions/history?limit=100&communityId=${communityId}&all=true`)
@@ -163,7 +163,7 @@ const AdminPanel = () => {
                 color: theme.primary,
               }}
             >
-              Community Owner View
+              {isCommunityOwner ? 'Community Owner' : 'Community Admin'}
             </div>
           )}
         </div>
@@ -261,8 +261,8 @@ const AdminPanel = () => {
         ))}
       </div>
 
-      {/* Pending Approvals - For Founders and Community Owners */}
-      {(isFounder || isCommunityOwner) && pendingTransactions.length > 0 && (
+      {/* Pending Approvals - For Founders, Community Owners, and Admins */}
+      {(isFounder || isCommunityAdmin) && pendingTransactions.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -486,8 +486,8 @@ const AdminPanel = () => {
                           {(transaction.status || 'unknown').toUpperCase()}
                         </div>
                       </div>
-                      {/* Approve/Reject buttons for pending transactions (Founders and Community Owners) */}
-                      {(isFounder || isCommunityOwner) && transaction.status === 'pending' && (
+                      {/* Approve/Reject buttons for pending transactions (Founders, Owners, and Admins) */}
+                      {(isFounder || isCommunityAdmin) && transaction.status === 'pending' && (
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleApproval(transaction._id, 'approve')}
@@ -807,12 +807,12 @@ const AdminPanel = () => {
                     }}
                   >
                     <option value="member" style={{ backgroundColor: theme.surface }}>👤 Member</option>
-                    <option value="admin" style={{ backgroundColor: theme.surface }}>⭐ Admin</option>
-                    {isFounder && <option value="owner" style={{ backgroundColor: theme.surface }}>👑 Owner</option>}
+                    {isCommunityOwner && <option value="admin" style={{ backgroundColor: theme.surface }}>⭐ Admin</option>}
+                    {(isFounder || isCommunityOwner) && <option value="owner" style={{ backgroundColor: theme.surface }}>👑 Owner</option>}
                   </select>
                   <p className="mt-2 text-xs" style={{ color: theme.textSecondary }}>
                     {inviteForm.role === 'member' && '• Can send and receive points'}
-                    {inviteForm.role === 'admin' && '• Can manage members and view reports'}
+                    {inviteForm.role === 'admin' && '• Can invite members and view all employees'}
                     {inviteForm.role === 'owner' && '• Full control over the community'}
                   </p>
                 </div>

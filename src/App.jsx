@@ -70,7 +70,7 @@ function App() {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute requireCommunityOwner>
+                <ProtectedRoute requireCommunityAdmin>
                   <DashboardLayout>
                     <AdminPanel />
                   </DashboardLayout>
